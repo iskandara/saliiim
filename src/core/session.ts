@@ -477,7 +477,8 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       if (s.status !== 'live' && s.status !== 'draft') fail('not_open');
       s.status = 'closed';
       s.closedBy = ev.payload.by;
-      for (const m of s.matches) if (m.status === 'queued') m.status = 'skipped';
+      // Anything not confirmed by now does not count.
+      for (const m of s.matches) if (m.status === 'queued' || m.status === 'live' || m.status === 'pending') m.status = 'skipped';
       break;
   }
   fillCourts(s);

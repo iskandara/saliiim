@@ -113,6 +113,7 @@ describe('session flow', () => {
     push({ type: 'start', payload: {} });
     let s = push({ type: 'close', payload: { by: 'auto' } });
     expect(s.status).toBe('closed');
+    expect(s.matches.every((m) => m.status === 'skipped')).toBe(true);
     expect(s.closedBy).toBe('auto');
     s = push({ type: 'add_late', payload: { id: 'z', name: 'z' } });
     expect(s.ignored.at(-1)?.reason).toBe('closed');

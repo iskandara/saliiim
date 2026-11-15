@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { pointLabels, scoreBanner, serveSlot } from '../core/scoring';
 import { currentServer } from '../core/serve';
 import { canConfirm, canScore, liveMatchOnCourt, nameOf, sideName, type MatchState } from '../core/session';
@@ -75,6 +75,9 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  // Closed session: go back to the page that shows the summary.
+  if (s.status === 'closed') return <Navigate to={back} replace />;
 
   if (!m) {
     return (
