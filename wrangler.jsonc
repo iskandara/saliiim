@@ -1,0 +1,9 @@
+{
+  // Cloudflare Workers static site: serve the Vite build, and send every route to the app.
+  "name": "saliiim",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

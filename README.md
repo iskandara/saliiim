@@ -54,12 +54,14 @@ npm run build
 
 Free-tier note: Supabase pauses free projects after a week with no activity. Open the dashboard to resume it.
 
-### 2. Cloudflare Pages
+### 2. Cloudflare (Workers)
 
-1. **Workers & Pages → Create → Pages → Connect to Git**, pick this repository.
-2. Build command `npm run build`, output directory `dist`.
-3. Environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from step 1.5.
-4. Deploy. `public/_redirects` already sends every route to the app.
+1. **Workers & Pages → Create → Import a repository**, pick this repository.
+2. Build command `npm run build`, deploy command `npx wrangler deploy` (the defaults). `wrangler.jsonc` serves `dist/` and sends every route to the app.
+3. API token: let Cloudflare create a new one.
+4. Deploy. The Supabase URL and publishable key come from `.env.production`, so no dashboard variables are needed.
+
+Vercel also works (`vercel.json` is included): import the repo and deploy. Its free plan is for non-commercial use only.
 
 The publishable key is safe in the browser: all writes go through Postgres functions that check the caller's role, and row-level security limits reads to people who opened the session's link.
 
