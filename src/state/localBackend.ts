@@ -118,6 +118,9 @@ export class LocalBackend implements Backend {
     if (err) throw new BackendError(err);
     emit(s, body, device());
     if (body.type === 'confirm') s.locks = s.locks.filter((l) => l.court !== body.payload.court);
+    if (body.type === 'record_result' && (roleOf(state, device()) === 'host' || roleOf(state, device()) === 'co_host')) {
+      s.locks = s.locks.filter((l) => l.court !== body.payload.court);
+    }
     if (body.type === 'close') s.locks = [];
     save(all);
   }

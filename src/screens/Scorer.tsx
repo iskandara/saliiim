@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { pointLabels, scoreBanner, serveSlot } from '../core/scoring';
 import { currentServer } from '../core/serve';
-import { canConfirm, canScore, liveMatchOnCourt, nameOf, sideName, type MatchState } from '../core/session';
+import { canConfirm, canScore, isHostRole, liveMatchOnCourt, nameOf, pendingResult, sideName, type MatchState } from '../core/session';
+import { EnterScoreSheet } from '../ui/session-ui';
 import type { Team } from '../core/types';
 import { useT } from '../i18n';
 import { backend } from '../state';
@@ -24,6 +25,7 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
   const [pickServer, setPickServer] = useState(false);
   const [serveSkipped, setServeSkipped] = useState(false);
   const [skipAsk, setSkipAsk] = useState(false);
+  const [entering, setEntering] = useState(false);
   const hadLock = useRef(false);
 
   // Take the court when nobody holds it; keep it alive with a heartbeat.
@@ -93,13 +95,25 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
 
   const slot = serveSlot(m.score);
   const server = currentServer(m.serve, slot);
-  const needServer = mine && !m.serve && m.inputs.length === 0 && !serveSkipped;
+  const needServer = mine && m.status === 'live' && !m.serve && m.inputs.length === 0 && !serveSkipped;
+  // A typed-in result shows its games on the board while it waits for the confirm.
+  const shownGames = (team: 0 | 1) => (m.entered ? (team === 0 ? m.entered.gamesA : m.entered.gamesB) : m.score.games[team]);
   const labels = pointLabels(m.score);
   const banner = scoreBanner(m.score, s.settings.rules);
   const holderName = s.players.find((p) => p.deviceId === holder)?.name ?? t('someone');
   const stale = lock ? Date.now() - lock.heartbeatAt > 60_000 : false;
   const lastPoint = [...m.inputs].reduce<Team[]>((acc, i) => (i.type === 'undo' ? acc.slice(0, -1) : [...acc, i.team]), []).at(-1);
   const confirmable = canConfirm(s, device, m, holder);
+  const pending = pendingResult(m);
+
+  const saveEntered = (gamesA: number, gamesB: number) =>
+    send(async () => {
+      setEntering(false);
+      await append({ type: 'record_result', payload: { matchId: m.id, court, gamesA, gamesB } });
+      toast(t('saved_result'));
+      // A host's entry finishes the match; a player's waits here for the other team.
+      if (isHostRole(ctx.role)) nav(back);
+    });
 
   const setServer = (playerId: string) =>
     send(async () => {
@@ -161,19 +175,19 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
         <div className="banner">{banner === 'tiebreak' ? t('banner_tiebreak', { n: s.settings.rules.tiebreakTo }) : t(`banner_${banner}`)}</div>
       )}
 
-      {m.status === 'pending' && m.score.winner !== null && (
+      {m.status === 'pending' && pending && (
         <div className="card accent gsm">
           <b>{t('gsm_title')}</b>
           <p className="small">
             {t('gsm_body', {
-              team: sideName(s, m.score.winner === 0 ? m.a : m.b),
-              score: `${Math.max(...m.score.games)}-${Math.min(...m.score.games)}`,
+              team: sideName(s, pending.winner === 0 ? m.a : m.b),
+              score: `${Math.max(pending.gamesA, pending.gamesB)}-${Math.min(pending.gamesA, pending.gamesB)}`,
             })}
           </p>
           <div className="actions">
             {mine && (
               <Btn icon="undo" onClick={undo}>
-                {t('undo_last_point')}
+                {t(m.entered ? 'take_back' : 'undo_last_point')}
               </Btn>
             )}
             {confirmable && (
@@ -215,8 +229,8 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
                 {labels[team]}
               </b>
             </span>
-            <span className="team-games digits" key={m.score.games[team]}>
-              {m.score.games[team]}
+            <span className="team-games digits" key={shownGames(team)}>
+              {shownGames(team)}
             </span>
           </button>
         ))}
@@ -249,6 +263,11 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
       )}
 
       <div className="actions">
+        {m.status === 'live' && (mine || isHostRole(ctx.role)) && (
+          <Btn icon="edit" onClick={() => setEntering(true)}>
+            {t('enter_final')}
+          </Btn>
+        )}
         {mine && ctx.role !== 'player' && (
           <Btn icon="skip" onClick={() => setSkipAsk(true)}>
             {t('skip')}
@@ -259,6 +278,8 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
           <span>{t(backLabel)}</span>
         </Link>
       </div>
+
+      <EnterScoreSheet s={s} m={m} open={entering} onClose={() => setEntering(false)} onSave={saveEntered} />
 
       <Sheet open={taking} onClose={() => setTaking(false)} title={t('take_over_title')}>
         <p>{t('take_over_body', { name: holderName })}</p>

@@ -41,6 +41,7 @@ beforeAll(async () => {
     grant usage on schema auth to authenticated;
   `);
   await db.exec(readFileSync('supabase/migrations/0001_init.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0002_record_result.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -82,6 +83,15 @@ describe('supabase migration', () => {
     const [forced] = await as<{ r: { ok: boolean } }>(BAYU, `select public.acquire_lock($1, 1, 'm1', true) as r`, [sessionId]);
     expect(forced!.r.ok).toBe(true);
     await fails(SARI, `select public.append_event($1, 'point', $2)`, [sessionId, point(1, 'm1', 0)], 'no_lock');
+  });
+
+  it('typed-in final score: lock holder or host only; a host entry frees the court', async () => {
+    const res = (gamesA: number, gamesB: number) => JSON.stringify({ court: 1, matchId: 'm1', gamesA, gamesB });
+    await fails(SARI, `select public.append_event($1, 'record_result', $2)`, [sessionId, res(4, 1)], 'no_lock');
+    await as(BAYU, `select public.append_event($1, 'record_result', $2)`, [sessionId, res(1, 4)]);
+    await as(HOST, `select public.append_event($1, 'record_result', $2)`, [sessionId, res(4, 2)]);
+    const [locks] = await as<{ n: number }>(HOST, `select count(*)::int as n from public.court_locks where session_id = $1`, [sessionId]);
+    expect(locks!.n).toBe(0);
   });
 
   it('only members can read the session (row level security)', async () => {

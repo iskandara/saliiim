@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { pointLabels } from '../core/scoring';
 import {
   biggestWin, liveMatchOnCourt, queue, sideName, standings, unitName, waitingFor,
   type MatchState, type SessionState,
 } from '../core/session';
 import { useT } from '../i18n';
-import { Icon } from './kit';
+import { Btn, Icon, Sheet, Stepper } from './kit';
 
 export function LiveBadge() {
   const t = useT();
@@ -16,7 +16,7 @@ export function LiveBadge() {
 export function MiniScore({ s, m }: { s: SessionState; m: MatchState }) {
   const t = useT();
   const labels = pointLabels(m.score);
-  const finished = m.result;
+  const finished = m.result ?? m.entered;
   const rows: [string[], number, string][] = [
     [m.a, finished ? finished.gamesA : m.score.games[0], labels[0]],
     [m.b, finished ? finished.gamesB : m.score.games[1], labels[1]],
@@ -207,7 +207,7 @@ export function ResultsList({ s, onEdit }: { s: SessionState; onEdit?: (m: Match
             <span className={`l ${m.result!.winner === 0 ? 'win' : ''}`}>{sideName(s, m.a)}</span>
             <span className="score">
               {m.result!.gamesA}-{m.result!.gamesB}
-              {m.result!.reason !== 'played' && <span className="tag">{t(m.result!.reason === 'edited' ? 'edited' : m.result!.reason === 'awarded' ? 'awarded' : 'kept')}</span>}
+              {m.result!.reason !== 'played' && <span className="tag">{t(m.result!.reason)}</span>}
             </span>
             <span className={`r ${m.result!.winner === 1 ? 'win' : ''}`}>{sideName(s, m.b)}</span>
             {onEdit && (
@@ -231,5 +231,49 @@ export function ProgressLine({ s }: { s: SessionState }) {
       {t('played_of', { done, total: s.matches.length - skipped })}
       {skipped > 0 && ` · ${t('skipped_n', { n: skipped })}`}
     </p>
+  );
+}
+
+/** Type in the final games after a match, instead of scoring it live. */
+export function EnterScoreSheet({ s, m, open, onClose, onSave }: { s: SessionState; m: MatchState; open: boolean; onClose: () => void; onSave: (gamesA: number, gamesB: number) => void }) {
+  const t = useT();
+  const start = m.entered ?? { gamesA: m.score.games[0], gamesB: m.score.games[1] };
+  const [a, setA] = useState(start.gamesA);
+  const [b, setB] = useState(start.gamesB);
+  useEffect(() => {
+    if (open) {
+      setA(start.gamesA);
+      setB(start.gamesB);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tie = a === b;
+  return (
+    <Sheet open={open} onClose={onClose} title={t('enter_title')}>
+      <p className="small muted">{t('enter_help')}</p>
+      {([
+        [m.a, a, setA],
+        [m.b, b, setB],
+      ] as const).map(([side, value, set], i) => (
+        <div key={i} className="enter-row">
+          <span className="grow">
+            <b>{sideName(s, side)}</b>
+          </span>
+          <Stepper label={t('enter_games', { team: sideName(s, side) })} value={value} min={0} max={20} onChange={set} />
+        </div>
+      ))}
+      {tie && (
+        <p className="field-error" role="alert">
+          {t('enter_tie')}
+        </p>
+      )}
+      <div className="actions">
+        <Btn icon="left" onClick={onClose}>
+          {t('cancel')}
+        </Btn>
+        <Btn kind="primary" icon="check" disabled={tie} onClick={() => onSave(a, b)}>
+          {t('enter_save')}
+        </Btn>
+      </div>
+    </Sheet>
   );
 }

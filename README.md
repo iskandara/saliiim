@@ -11,6 +11,7 @@ Run a casual tennis session from one phone. The host sets up courts and rules, s
 - **Courts board:** the queue fills free courts automatically. Hosts can skip (with undo), mark players as left, add late arrivals, approve join requests, hand scoring to players and promote a co-host.
 - **Live scoring:** one tap per point, unlimited undo, serve rotation, deuce and tiebreak banners. **One phone scores each court at a time** (court lock); others can take over after confirming.
 - **Confirmation:** in *Players on court* mode, the other team confirms the result.
+- **Score after the match:** no live scoring needed. The host taps *Enter score* on a court and types the games (counts straight away). A player can do the same from the scoring screen, and the other team confirms.
 - **Standings:** win rate, then game difference per match, then games won.
 - **Close:** prompted when all matches are done; sessions auto-close after 3 hours without activity. Summary, results, and a personal 1000×880 transparent PNG sticker.
 - **English and Jaksel copy**, light and dark themes, keyboard scoring on laptops (arrow keys, Z to undo).
@@ -48,7 +49,7 @@ npm run build
 1. Create a project at [supabase.com](https://supabase.com) (region: Singapore is closest to Indonesia).
 2. **Authentication → Sign In / Providers:** turn on **Anonymous sign-ins**.
 3. **Database → Extensions:** enable **pg_cron** (used for auto-close).
-4. **SQL Editor:** paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+4. **SQL Editor:** paste and run each file in [`supabase/migrations/`](supabase/migrations/) in order (`0001_init.sql`, then `0002_record_result.sql`). Already set up? Run only the new ones.
    Or with the CLI: `supabase link --project-ref <ref>` then `supabase db push`.
 5. **Project Settings → API Keys:** copy the **Project URL** and the **Publishable key** (starts with `sb_publishable_`). Supabase is retiring the old `anon` key by the end of 2026.
 

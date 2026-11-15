@@ -5,7 +5,7 @@ import { useT } from '../i18n';
 import { hostKeyFor } from '../state';
 import { errorCode, type SessionCtx } from '../state/useSession';
 import { absUrl, Btn, copyText, Icon, inAppBrowser, Sheet, useToast } from '../ui/kit';
-import { CourtsList, LiveBadge, NextUp, Notices, ProgressLine } from '../ui/session-ui';
+import { CourtsList, EnterScoreSheet, LiveBadge, NextUp, Notices, ProgressLine } from '../ui/session-ui';
 import { HostGate } from './HostGate';
 
 export function Board() {
@@ -45,6 +45,7 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
     }
   });
   const [skipping, setSkipping] = useState<MatchState | null>(null);
+  const [entering, setEntering] = useState<MatchState | null>(null);
   const [handing, setHanding] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -150,9 +151,12 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
               m && (
                 <div className="actions">
                   <Link className="btn primary" to={`/s/${id}/court/${court}`} viewTransition>
-                    <Icon name={m.inputs.length ? 'play' : 'edit'} />
+                    <Icon name="play" />
                     <span>{m.inputs.length ? t('resume_match') : t('start_match')}</span>
                   </Link>
+                  <Btn icon="edit" onClick={() => setEntering(m)}>
+                    {t('enter_score')}
+                  </Btn>
                   <Btn icon="skip" onClick={() => askSkip(m)}>
                     {t('skip')}
                   </Btn>
@@ -218,6 +222,23 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
           </section>
         </aside>
       </div>
+
+      {entering && (
+        <EnterScoreSheet
+          s={s}
+          m={entering}
+          open={!!entering}
+          onClose={() => setEntering(null)}
+          onSave={(gamesA, gamesB) =>
+            run(async () => {
+              const m = entering;
+              setEntering(null);
+              await append({ type: 'record_result', payload: { matchId: m.id, court: m.court!, gamesA, gamesB } });
+              toast(t('saved_result'));
+            })
+          }
+        />
+      )}
 
       <Sheet open={!!skipping} onClose={() => setSkipping(null)} title={t('skip_title')}>
         {skipping && (

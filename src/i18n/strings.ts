@@ -1,6 +1,16 @@
 /** All copy, keyed. Tennis terms stay English in both languages. Use {name} placeholders, never concatenation. */
 export const en = {
   tagline: 'You tap the points. We do the rest.',
+  enter_score: 'Enter score',
+  enter_final: 'Enter final score',
+  enter_title: 'Final score',
+  enter_help: 'Just the games. Use this when nobody scored the match live.',
+  enter_save: 'Save result',
+  enter_tie: "A match can't end in a tie.",
+  enter_games: 'Games for {team}',
+  entered: 'entered',
+  take_back: 'Take back score',
+  saved_result: 'Result saved.',
   home_eyebrow: 'Casual tennis, scored live',
   have_link: 'Got a link from your group?',
   have_link_ph: 'Paste the Saliiim link',
@@ -315,6 +325,16 @@ export type Key = keyof typeof en;
 
 export const jksl: Record<Key, string> = {
   tagline: 'Lo tap poinnya, sisanya kita urus.',
+  enter_score: 'Input skor',
+  enter_final: 'Input skor akhir',
+  enter_title: 'Skor akhir',
+  enter_help: 'Cukup jumlah game-nya. Pakai ini kalau match-nya nggak di-skor live.',
+  enter_save: 'Simpan hasil',
+  enter_tie: 'Match nggak bisa seri.',
+  enter_games: 'Game buat {team}',
+  entered: 'diinput',
+  take_back: 'Batalin skor',
+  saved_result: 'Hasil kesimpen.',
   home_eyebrow: 'Tenis santai, skor live',
   have_link: 'Dapet link dari grup?',
   have_link_ph: 'Tempel link Saliiim di sini',

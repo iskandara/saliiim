@@ -110,6 +110,40 @@ describe('session flow', () => {
     expect(s.edits).toHaveLength(1);
   });
 
+  it('host types in a final score: the match counts straight away', () => {
+    const { push } = log({ format: 'singles' }, ['a', 'b']);
+    push({ type: 'start', payload: {} });
+    const s = push({ type: 'record_result', payload: { matchId: 'm1', court: 1, gamesA: 4, gamesB: 2 } });
+    expect(s.matches[0]).toMatchObject({ status: 'done', result: { gamesA: 4, gamesB: 2, winner: 0, reason: 'entered' } });
+    expect(standings(s)[0]!.unit).toBe('a');
+  });
+
+  it('a player types in a final score: it waits for the other team, and undo takes it back', () => {
+    const { push } = log({ format: 'singles', scorerMode: 'players' }, ['h', 'a', 'b']);
+    push({ type: 'claim', payload: { playerId: 'a', deviceId: 'dev-a' } }, null);
+    push({ type: 'start', payload: {} });
+    const enter = { type: 'record_result' as const, payload: { matchId: 'm1', court: 1, gamesA: 1, gamesB: 4 } };
+    let s = push(enter, 'dev-a');
+    expect(s.matches[0]).toMatchObject({ status: 'pending', entered: { gamesA: 1, gamesB: 4 } });
+    s = push({ type: 'point', payload: { matchId: 'm1', court: 1, team: 0 } }, 'dev-a');
+    expect(s.ignored.at(-1)?.reason).toBe('match_point_pending');
+    s = push({ type: 'undo', payload: { matchId: 'm1', court: 1 } }, 'dev-a');
+    expect(s.matches[0]).toMatchObject({ status: 'live', entered: null });
+    push(enter, 'dev-a');
+    s = push({ type: 'confirm', payload: { matchId: 'm1', court: 1 } }, 'dev-b');
+    expect(s.matches[0]!.result).toMatchObject({ gamesA: 1, gamesB: 4, winner: 1, reason: 'entered' });
+  });
+
+  it('rejects a tied or impossible typed-in score', () => {
+    const { push } = log({ format: 'singles' }, ['a', 'b']);
+    push({ type: 'start', payload: {} });
+    let s = push({ type: 'record_result', payload: { matchId: 'm1', court: 1, gamesA: 3, gamesB: 3 } });
+    expect(s.ignored.at(-1)?.reason).toBe('bad_score');
+    s = push({ type: 'record_result', payload: { matchId: 'm1', court: 1, gamesA: 4, gamesB: -1 } });
+    expect(s.ignored.at(-1)?.reason).toBe('bad_score');
+    expect(s.matches[0]!.status).toBe('live');
+  });
+
   it('a skipped match can be put back at the front of the queue', () => {
     const { push } = log({ format: 'singles' }, ['a', 'b', 'c', 'd']);
     push({ type: 'start', payload: {} });
@@ -163,5 +197,9 @@ describe('permissions', () => {
     expect(canConfirm(s, 'dev-a', m, 'dev-b')).toBe(true);
     expect(canAppend(s, 'dev-b', 'confirm', { court: 1 }, lock)).toBe('cannot_confirm');
     expect(canAppend(s, 'dev-a', 'confirm', { court: 1 }, lock)).toBeNull();
+    // Typing in a final score: hosts always, players only from the phone holding the court.
+    expect(canAppend(s, 'host-dev', 'record_result', { court: 1, matchId: 'm1' }, [])).toBeNull();
+    expect(canAppend(s, 'dev-a', 'record_result', { court: 1, matchId: 'm1' }, lock)).toBe('no_lock');
+    expect(canAppend(s, 'dev-b', 'record_result', { court: 1, matchId: 'm1' }, lock)).toBeNull();
   });
 });

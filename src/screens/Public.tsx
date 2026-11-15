@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  canConfirm, canScore, liveMatchOnCourt, partnerOf, playerStatus, sideName, unitForPlayer,
+  canConfirm, canScore, liveMatchOnCourt, partnerOf, pendingResult, playerStatus, sideName, unitForPlayer,
   type MatchState, type SessionState,
 } from '../core/session';
 import { useT } from '../i18n';
@@ -245,7 +245,10 @@ function MeView({ ctx, slug }: { ctx: SessionCtx; slug: string }) {
             <div className="gsm">
               <b>{t('confirm_yours')}</b>
               <p className="small">
-                {t('gsm_body', { team: sideName(s, m.score.winner === 0 ? m.a : m.b), score: `${Math.max(...m.score.games)}-${Math.min(...m.score.games)}` })}
+                {(() => {
+                  const r = pendingResult(m);
+                  return r ? t('gsm_body', { team: sideName(s, r.winner === 0 ? m.a : m.b), score: `${Math.max(r.gamesA, r.gamesB)}-${Math.min(r.gamesA, r.gamesB)}` }) : null;
+                })()}
               </p>
               <Btn kind="dark" icon="check" onClick={() => confirm(m)}>
                 {t('confirm_result')}

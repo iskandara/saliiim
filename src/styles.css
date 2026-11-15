@@ -419,6 +419,7 @@ h3 {
 .seg button {
   flex: 1 1 auto;
   min-height: 46px;
+  min-width: 44px;
   padding: 8px 12px;
   border: 0;
   border-radius: 12px;
@@ -1570,4 +1571,17 @@ section > h3 {
   .link-btn:active {
     transform: none;
   }
+}
+
+/* Court card actions: the main action gets its own row, the rest share the next. */
+.court .actions > :first-child {
+  flex-basis: 100%;
+}
+/* Final score sheet: one row per side, name and games stepper. */
+.enter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
 }

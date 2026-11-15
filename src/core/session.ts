@@ -34,6 +34,7 @@ export type EventBody =
   | { type: 'set_server'; payload: { matchId: string; court: number; playerId: string } }
   | { type: 'confirm'; payload: { matchId: string; court: number } }
   | { type: 'edit_result'; payload: { matchId: string; gamesA: number; gamesB: number } }
+  | { type: 'record_result'; payload: { matchId: string; court: number; gamesA: number; gamesB: number } }
   | { type: 'hand_scoring'; payload: Record<string, never> }
   | { type: 'promote'; payload: { playerId: string } }
   | { type: 'close'; payload: { by: 'host' | 'auto' } };
@@ -76,7 +77,7 @@ export interface MatchResult {
   gamesA: number;
   gamesB: number;
   winner: Team;
-  reason: 'played' | 'awarded' | 'kept' | 'edited';
+  reason: 'played' | 'awarded' | 'kept' | 'edited' | 'entered';
 }
 
 export interface MatchState {
@@ -92,6 +93,8 @@ export interface MatchState {
   serve: ServeOrder | null;
   score: ScoreState;
   result: MatchResult | null;
+  /** Final score typed in after the match instead of scoring live; waits for the other team's confirm. */
+  entered: { gamesA: number; gamesB: number } | null;
 }
 
 export interface Notice {
@@ -171,7 +174,7 @@ function match(s: SessionState, id: string): MatchState {
 
 function rescore(s: SessionState, m: MatchState) {
   m.score = replayScore(m.inputs, s.settings.rules).score;
-  if (m.status === 'live' || m.status === 'pending') m.status = m.score.winner === null ? 'live' : 'pending';
+  if (m.status === 'live' || m.status === 'pending') m.status = m.entered || m.score.winner !== null ? 'pending' : 'live';
 }
 
 /** Units that get ranked: pairs for fixed doubles, players otherwise. */
@@ -197,6 +200,7 @@ function addMatches(s: SessionState, specs: ReturnType<typeof buildSchedule>) {
       serve: null,
       score: initialScore(),
       result: null,
+      entered: null,
     });
   }
 }
@@ -430,6 +434,9 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       if (ev.type === 'point') {
         if (m.status === 'pending') fail('match_point_pending');
         m.inputs.push({ type: 'point', team: ev.payload.team });
+      } else if (m.entered) {
+        // Undo on a typed-in result takes the result back and returns to live scoring.
+        m.entered = null;
       } else {
         if (!m.inputs.some((i) => i.type === 'point')) fail('nothing_to_undo');
         m.inputs.push({ type: 'undo' });
@@ -446,9 +453,26 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
     }
     case 'confirm': {
       const m = match(s, ev.payload.matchId);
-      if (m.status !== 'pending' || m.score.winner === null) fail('not_pending');
+      const r = pendingResult(m);
+      if (m.status !== 'pending' || !r) fail('not_pending');
       m.status = 'done';
-      m.result = { gamesA: m.score.games[0], gamesB: m.score.games[1], winner: m.score.winner, reason: 'played' };
+      m.result = { ...r!, reason: m.entered ? 'entered' : 'played' };
+      break;
+    }
+    case 'record_result': {
+      const m = match(s, ev.payload.matchId);
+      const { gamesA, gamesB } = ev.payload;
+      if (!ON_COURT.has(m.status)) fail('not_on_court');
+      if (!validGames(gamesA) || !validGames(gamesB) || gamesA === gamesB) fail('bad_score');
+      if (isHostRole(roleOf(s, ev.actor))) {
+        // Hosts are trusted: the result counts straight away.
+        m.status = 'done';
+        m.entered = null;
+        m.result = { gamesA, gamesB, winner: gamesA > gamesB ? 0 : 1, reason: 'entered' };
+      } else {
+        m.entered = { gamesA, gamesB };
+        m.status = 'pending';
+      }
       break;
     }
     case 'edit_result': {
@@ -482,6 +506,15 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       break;
   }
   fillCourts(s);
+}
+
+const validGames = (n: number) => Number.isInteger(n) && n >= 0 && n <= 20;
+
+/** The result waiting for confirmation: a typed-in score, or the live score after the winning point. */
+export function pendingResult(m: MatchState): { gamesA: number; gamesB: number; winner: Team } | null {
+  if (m.entered) return { ...m.entered, winner: m.entered.gamesA > m.entered.gamesB ? 0 : 1 };
+  if (m.score.winner === null) return null;
+  return { gamesA: m.score.games[0], gamesB: m.score.games[1], winner: m.score.winner };
 }
 
 export function reduceSession(events: SessionEvent[]): SessionState {
@@ -669,6 +702,11 @@ export function canAppend(
   const court = Number(payload.court);
   const lock = locks.find((l) => l.court === court);
   if (SCORING_EVENTS.includes(type)) {
+    if (!lock || lock.deviceId !== deviceId || lock.matchId !== payload.matchId) return 'no_lock';
+    return null;
+  }
+  if (type === 'record_result') {
+    if (isHostRole(role)) return null;
     if (!lock || lock.deviceId !== deviceId || lock.matchId !== payload.matchId) return 'no_lock';
     return null;
   }
