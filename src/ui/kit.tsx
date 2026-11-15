@@ -88,48 +88,41 @@ export const useToast = () => useContext(ToastCtx);
 
 export type HeaderSize = 'full' | 'compact' | 'none';
 
-/**
- * Full masthead (tagline, net) on Home, Setup and the join page.
- * Compact one-line header during a session, so the scoreboard stays above the fold.
- */
-export function Masthead({ size }: { size: 'full' | 'compact' }) {
+/** Tennis ball: lime with the two white seams. Decorative. */
+export function Ball({ size = 28, tone = 'lime' }: { size?: number; tone?: 'lime' | 'grass' }) {
+  // 'grass' is the muted green of the reference's backdrop balls, so they never compete with real lime buttons.
+  const fill = tone === 'lime' ? 'var(--ball)' : 'var(--grass-ball)';
+  const seam = tone === 'lime' ? '#fdfdf8' : 'rgba(210, 214, 205, 0.85)';
+  return (
+    <svg className="tennis-ball" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="15" fill={fill} />
+      <path d="M5.5 5.5c5 4.5 5 16.5 0 21M26.5 5.5c-5 4.5-5 16.5 0 21" fill="none" stroke={seam} strokeWidth={tone === 'lime' ? 2.2 : 1.4} />
+    </svg>
+  );
+}
+
+/** Green header bar: wordmark and the theme/language pill. One size for every screen. */
+export function AppHeader() {
   const { t, lang, setLang, theme, setTheme } = usePrefs();
   const dark = theme === 'dark' || (theme === 'device' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  const prefs = (
-    <div className="prefs">
-      <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')} title={t('theme')}>
-        <Icon name={dark ? 'sun' : 'moon'} size={18} />
-      </button>
-      <div className="lang" role="group" aria-label={t('language')}>
-        <button aria-pressed={lang === 'en'} onClick={() => setLang('en')}>
-          EN
-        </button>
-        <button aria-pressed={lang === 'jksl'} onClick={() => setLang('jksl')}>
-          JKSL
-        </button>
-      </div>
-    </div>
-  );
-  if (size === 'compact') {
-    return (
-      <header className="masthead compact">
-        <Link to="/" className="burst small" aria-label={t('home_link')}>
-          Saliiim!
-        </Link>
-        {prefs}
-      </header>
-    );
-  }
   return (
-    <header className="masthead">
-      <div className="masthead-top">
-        <p className="tagline">{t('tagline')}</p>
-        <Link to="/" className="burst" aria-label={t('home_link')}>
-          Saliiim!
-        </Link>
+    <header className="app-header">
+      <Link to="/" className="wordmark" aria-label={t('home_link')}>
+        Saliiim<span>!</span>
+      </Link>
+      <div className="prefs">
+        <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')} title={t('theme')}>
+          <Icon name={dark ? 'sun' : 'moon'} size={18} />
+        </button>
+        <div className="lang" role="group" aria-label={t('language')}>
+          <button aria-pressed={lang === 'en'} onClick={() => setLang('en')}>
+            EN
+          </button>
+          <button aria-pressed={lang === 'jksl'} onClick={() => setLang('jksl')}>
+            JKSL
+          </button>
+        </div>
       </div>
-      <div className="net" aria-hidden="true" />
-      <div className="prefs-row">{prefs}</div>
     </header>
   );
 }
@@ -137,17 +130,28 @@ export function Masthead({ size }: { size: 'full' | 'compact' }) {
 export function Page({ children, tabs, wide, header = 'compact' }: { children: ReactNode; tabs?: ReactNode; wide?: boolean; header?: HeaderSize }) {
   const { t } = usePrefs();
   return (
-    <div className={`app ${wide ? 'wide' : ''} ${tabs ? 'has-tabs' : ''}`}>
-      <a className="skip-link" href="#main">
-        {t('skip_to_content')}
-      </a>
-      {header !== 'none' && <Masthead size={header} />}
-      {backend.mode === 'local' && header !== 'none' && <p className="demo">{t('demo_banner')}</p>}
-      <main className="content" id="main" tabIndex={-1}>
-        {children}
-      </main>
-      {tabs}
-    </div>
+    <>
+      {/* Clay court and big balls behind the framed app, shown from tablet width. */}
+      <div className="backdrop" aria-hidden="true">
+        <span className="big-ball a">
+          <Ball size={220} tone="grass" />
+        </span>
+        <span className="big-ball b">
+          <Ball size={220} tone="grass" />
+        </span>
+      </div>
+      <div className={`app ${wide ? 'wide' : ''}`}>
+        <a className="skip-link" href="#main">
+          {t('skip_to_content')}
+        </a>
+        {header !== 'none' && <AppHeader />}
+        {backend.mode === 'local' && header !== 'none' && <p className="demo">{t('demo_banner')}</p>}
+        <main className="content" id="main" tabIndex={-1}>
+          {children}
+        </main>
+        {tabs}
+      </div>
+    </>
   );
 }
 

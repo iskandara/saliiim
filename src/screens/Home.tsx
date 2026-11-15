@@ -1,21 +1,68 @@
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
 import { readHistory } from '../state';
-import { Btn, Icon, Page } from '../ui/kit';
+import { Ball, Btn, Field, Icon, Page } from '../ui/kit';
+
+/** Accepts a full link or a bare slug and returns the public slug, or null. */
+function slugFrom(input: string): string | null {
+  const text = input.trim();
+  const fromUrl = text.match(/\/p\/([A-Za-z0-9_-]{6,})/);
+  if (fromUrl) return fromUrl[1]!;
+  return /^[A-Za-z0-9_-]{6,}$/.test(text) ? text : null;
+}
 
 export function Home() {
   const t = useT();
   const nav = useNavigate();
   const history = readHistory();
   const lastHosted = history.find((h) => h.role === 'host');
+  const [link, setLink] = useState('');
+  const [linkErr, setLinkErr] = useState<string | null>(null);
+
   return (
     <Page header="full">
-      <h1>{t('home_title')}</h1>
-      <p className="muted">{t('home_sub')}</p>
-      <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>
-        {t('start_session')}
-      </Btn>
+      <section className="court-surface hero">
+        <p className="eyebrow">{t('home_eyebrow')}</p>
+        <h1>{t('tagline')}</h1>
+        <p>{t('home_sub')}</p>
+        <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>
+          {t('start_session')}
+        </Btn>
+        <div className="ball-row" aria-hidden="true">
+          {Array.from({ length: 7 }, (_, i) => (
+            <Ball key={i} size={26} />
+          ))}
+        </div>
+      </section>
+
+      <form
+        className="panel"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const slug = slugFrom(link);
+          if (!slug) return setLinkErr(t('bad_link'));
+          nav(`/p/${slug}`);
+        }}
+      >
+        <Field label={t('have_link')} error={linkErr}>
+          <div className="inline-form">
+            <input
+              value={link}
+              inputMode="url"
+              placeholder={t('have_link_ph')}
+              onChange={(e) => {
+                setLink(e.target.value);
+                setLinkErr(null);
+              }}
+            />
+            <Btn kind="dark" type="submit">
+              {t('open_link')}
+            </Btn>
+          </div>
+        </Field>
+      </form>
+
       <section>
         <h3>{t('past_sessions')}</h3>
         {history.length === 0 ? (
@@ -39,7 +86,7 @@ export function Home() {
         )}
       </section>
       {lastHosted && (
-        <Btn kind="dark" icon="undo" onClick={() => nav('/new?repeat=1')}>
+        <Btn icon="undo" onClick={() => nav('/new?repeat=1')}>
           {t('repeat_last')}
         </Btn>
       )}

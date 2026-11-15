@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { myPlayer, standings, unitForPlayer, unitName, type SessionState } from '../core/session';
 import { useT } from '../i18n';
-import { Btn } from '../ui/kit';
+import { Ball, Btn } from '../ui/kit';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
 import { downloadCanvas, drawSticker, STICKER_FONT } from '../ui/sticker';
 
@@ -42,10 +42,19 @@ export function SummaryView({ s, device }: { s: SessionState; device: string | n
 
   return (
     <>
-      <span className="tag dark">{t('session_closed')}</span>
-      <h1>{t('wrap')}</h1>
-      <p className="muted">{s.settings.name}</p>
-      <p className="small">{t(s.closedBy === 'auto' ? 'auto_closed_note' : 'locked_note')}</p>
+      <section className="court-surface hero">
+        <p className="eyebrow">{t('session_closed')}</p>
+        <h1>{t('wrap')}</h1>
+        <p>
+          <b>{s.settings.name}</b>
+        </p>
+        <p className="small">{t(s.closedBy === 'auto' ? 'auto_closed_note' : 'locked_note')}</p>
+        <div className="ball-row" aria-hidden="true">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Ball key={i} size={22} />
+          ))}
+        </div>
+      </section>
 
       {mineIdx >= 0 && table[mineIdx]!.played > 0 && (
         <div className="stats">

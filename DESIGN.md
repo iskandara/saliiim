@@ -1,50 +1,63 @@
 # Saliiim design direction
 
-Source: the M1 mockup and PRD by the Saliiim team. This file records that direction so later changes keep to it.
+Sources: the M1 mockup and PRD by the Saliiim team, and two reference images the owner supplied on 2026-11-15 (a framed blue hard court on clay, lime pill buttons, italic uppercase headlines, rows of tennis balls). This file records that direction so later changes keep to it.
 
-Design Read: courtside session tool for casual tennis groups in Indonesia, used one-handed on mid-range Android phones in bright sun, in a tennis-club scoreboard language.
+Design Read: courtside session tool for casual tennis groups in Indonesia, used one-handed on mid-range Android phones in bright sun, in a match-day hard-court language.
 
-Dial: ENERGY 2 / RHYTHM 1 / MOTION 2
+Dial: ENERGY 3 / RHYTHM 2 / MOTION 2
 
-- ENERGY 2: confident and playful (burst logo, Jaksel voice), but the scoreboard is the loudest thing on screen.
-- RHYTHM 1: screens are tools, so sections stay predictable. People scan them mid-match.
-- MOTION 2: motion only where it confirms something on court (score roll, point flash, winning sweep, page change). Nothing loops.
+- ENERGY 3: the court moments are bold (big italic type, the blue court, a row of balls).
+- RHYTHM 2: two registers, so screens alternate between court moments and quiet cards instead of repeating one block.
+- MOTION 2: motion only where it confirms something on court (score roll, point flash, winning sweep, page change, press). Nothing loops.
 
-## Identity
+## Two registers
 
-A tennis court and its scoreboard. Players should feel they are looking at the club's own board, not an app.
+**Court**, for the moments people look at: the home hero, the join hero, every scoreboard (board, scorer, live view, TV), and the end-of-session hero and sticker.
+- A blue hard court with inset white lines. A net line with a centre strap separates the two sides.
+- White text, an italic uppercase display headline, and a small tracked eyebrow naming the moment.
+- A row of tennis balls on the baseline, used only on hero cards.
 
-- **Court green and cream scoreboard halves.** Team A sits on cream and team B on green, like the two lines of a club scoreboard.
-- **Net band.** The masthead ends in a net with a white tape and centre strap. During a session only the white tape remains, to save space.
-- **Grass stripes.** A faint vertical stripe texture on green surfaces reads as a mown court. It is used only on green, never on cream.
-- **Burst logo.** "Saliiim!" in ball yellow inside a star burst: the shout when a point is won.
+**Simple**, for the work: setup, players, roster, results, standings, sheets and toasts.
+- Light cards with 20px corners and hairline borders. Sentence-case headings and quiet type.
+- Nothing decorative, so the court moments stand out.
+
+## Frame and backdrop
+
+- The header is the green frame (#0b5534), with the "Saliiim!" wordmark in white and a lime "!".
+- From 760px wide, the app sits in a rounded green frame on clay tiles, with two muted green balls in the corners, as in the reference. The balls are muted on purpose so they never compete with lime buttons.
+- On phones the backdrop is off and the screen belongs to the app.
 
 ## Palette
 
 | Token | Light | Dark | Role |
 |---|---|---|---|
-| `--green` | #1f5a2e | #1b4a27 | Court: masthead, team B, first place |
-| `--ball` | #d9f03a | #d9f03a | The one accent: primary actions, selection, the winning moment |
-| `--bg` / `--surface` | #f3f0e6 / #fbfaf5 | #0e1a12 / #15251a | Cream page and panels (dark: night court) |
-| `--ink` | #0f2a17 | #eef3e6 | Text and 2px borders |
-| `--danger` | #b3261e | #ff8a80 | LIVE badge and destructive actions, one red only |
-| `--focus` | #0f2a17 | #d9f03a | Keyboard focus ring (ink on cream, ball yellow at night) |
-
-Ball yellow is the only accent. It marks what to tap next, and the winner.
+| `--frame` | #0b5534 | #083d25 | Header, bottom nav, first-place row |
+| `--court` | #4357cc | #2f3f9e | Court register surfaces (white text 6.05:1 / 9.03:1) |
+| `--ball` | #d7f13b | #d7f13b | The one accent: primary pill, active tab, selection, the winner |
+| `--clay` | #7a2d1b | #3f180e | Backdrop only, from 760px |
+| `--bg` / `--card` | #f3f4ee / #fdfdf8 | #0d1511 / #17211c | Simple register |
+| `--ink` / `--muted` | #11241a / #55625a | #eef2ea / #a3b0a7 | Text (muted 5.79:1 light, 8.23:1 dark) |
+| `--danger` | #b3261e | #ff8a80 | LIVE and destructive actions |
 
 ## Type
 
-- **Display: Archivo (variable).** A sturdy sports grotesk with strong numerals and width control, used for headings, the logo and every score. It is bundled with the app so it works offline at the courts.
-- **Body: the system font.** It loads instantly and reads well at small sizes in sun.
-- Scores use tabular digits, so numbers don't jump sideways as they change.
+- **Archivo (variable), with italic.** Italic heavy uppercase is the court voice (headlines, scores). Upright Archivo is used for everything else. It is a single family, bundled so it works offline.
+- Scores use tabular italic digits. Headlines scale with screen width.
 
-## Shape and components
+## Shape
 
-- Square corners and 2px ink borders everywhere: it should look like a printed board, not a rounded app. No shadows, glass or glow.
-- Tap targets are at least 44px. The score blocks are 150px tall, since they are tapped one-handed mid-rally.
+- Buttons are pills, because they are the reference's tappable shape and read as "press me" at a glance. Lime marks the one primary action per screen.
+- Cards have 20px corners, fields 12px, courts 24px, tags 6px. Radius marks the register, not decoration.
+- The main action sits in a sticky bar at thumb height. The bottom nav is a floating green pill.
+- Targets are at least 44px. Score halves are 168px tall.
+- One glass element only: the sticky action bar, blurred so the list scrolling behind it stays readable.
 
 ## Voice
 
 - English and Jaksel (Jakarta Indonesian-English mix). Short, warm, a bit cheeky: "Gas, mulai match!", "No tipu-tipu."
 - Tennis terms stay English in both languages.
 - No buzzwords and no em dashes.
+
+## Reference boundary
+
+The references guided the visual language (court, balls, frame, italic type, pills). Saliiim keeps its own name, wordmark, copy, screens and flows. Nothing is copied from the referenced product.

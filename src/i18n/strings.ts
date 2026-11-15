@@ -1,6 +1,14 @@
 /** All copy, keyed. Tennis terms stay English in both languages. Use {name} placeholders, never concatenation. */
 export const en = {
   tagline: 'You tap the points. We do the rest.',
+  home_eyebrow: 'Casual tennis, scored live',
+  have_link: 'Got a link from your group?',
+  have_link_ph: 'Paste the Saliiim link',
+  open_link: 'Open',
+  bad_link: "That doesn't look like a Saliiim session link.",
+  setup_basics: 'The basics',
+  setup_play: 'How you play',
+  setup_scoring: 'Scoring',
   language: 'Language',
   home_link: 'Saliiim home',
   skip_to_content: 'Skip to content',
@@ -307,6 +315,14 @@ export type Key = keyof typeof en;
 
 export const jksl: Record<Key, string> = {
   tagline: 'Lo tap poinnya, sisanya kita urus.',
+  home_eyebrow: 'Tenis santai, skor live',
+  have_link: 'Dapet link dari grup?',
+  have_link_ph: 'Tempel link Saliiim di sini',
+  open_link: 'Buka',
+  bad_link: 'Itu kayaknya bukan link sesi Saliiim.',
+  setup_basics: 'Info dasar',
+  setup_play: 'Cara main',
+  setup_scoring: 'Skor',
   language: 'Bahasa',
   home_link: 'Saliiim home',
   skip_to_content: 'Langsung ke konten',

@@ -88,6 +88,8 @@ export function Setup() {
   return (
     <Page header="full">
       <h1>{t('new_session')}</h1>
+      <section className="panel">
+        <h3>{t('setup_basics')}</h3>
       <Field label={t('your_name')} error={hostErr}>
         <input id="host-name" value={s.hostName} maxLength={40} placeholder={t('your_name_ph')} onChange={(e) => set('hostName', e.target.value)} />
       </Field>
@@ -95,6 +97,10 @@ export function Setup() {
         <input id="session-name" value={s.name} maxLength={60} placeholder={t('session_name_ph')} onChange={(e) => set('name', e.target.value)} />
       </Field>
 
+      </section>
+
+      <section className="panel">
+        <h3>{t('setup_play')}</h3>
       <div className="field">
         <span className="field-label">{t('format')}</span>
         <Seg label={t('format')} value={s.format} options={[['singles', t('singles')], ['doubles', t('doubles')]]} onChange={(v) => set('format', v)} />
@@ -122,6 +128,10 @@ export function Setup() {
         <Seg label={t('match_ends')} value={s.rules.gamesTo} options={[[4, t('first_to_n', { n: 4 })], [6, t('first_to_n', { n: 6 })]]} onChange={(v) => setRule('gamesTo', v)} />
       </div>
 
+      </section>
+
+      <section className="panel">
+        <h3>{t('setup_scoring')}</h3>
       <div className="advanced">
         <button className="how-toggle" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}>
           <span>
@@ -171,9 +181,13 @@ export function Setup() {
         <span className="help">{t(s.scorerMode === 'host' ? 'host_only_help' : 'players_help')}</span>
       </div>
 
-      <Btn kind="dark" icon="right" onClick={next}>
+      </section>
+
+      <div className="cta-bar">
+      <Btn kind="primary" icon="right" onClick={next}>
         {t('next_players')}
       </Btn>
+      </div>
 
       <Sheet open={review} onClose={() => setReview(false)} title={t('review_title')}>
         <p className="muted small">{t('review_sub')}</p>

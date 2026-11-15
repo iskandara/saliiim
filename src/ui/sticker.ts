@@ -8,79 +8,90 @@ export interface StickerData {
 
 export const STICKER_FONT = "'Archivo Variable'";
 
-/** 1000 x 880 transparent PNG for Instagram Stories: the logo burst over a court card. */
+/** 1000 x 880 transparent PNG for Instagram Stories: a green-framed blue court with the result. */
 export function drawSticker(d: StickerData): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = 1000;
   c.height = 880;
   const g = c.getContext('2d')!;
-  const green = '#1f5a2e';
-  const ink = '#0f2a17';
-  const ball = '#d9f03a';
+  const frame = '#0b5534';
+  const court = '#4357cc';
+  const line = 'rgba(244,245,249,0.92)';
+  const ink = '#11241a';
+  const ball = '#d7f13b';
+  const font = (weight: number, size: number, italic = false) => `${italic ? 'italic ' : ''}${weight} ${size}px ${STICKER_FONT}, system-ui, sans-serif`;
 
-  // Card with a court line.
-  g.fillStyle = green;
-  roundRect(g, 60, 150, 880, 680, 36);
+  // Green frame, blue court, white court lines.
+  g.fillStyle = frame;
+  roundRect(g, 40, 40, 920, 800, 48);
   g.fill();
-  g.strokeStyle = 'rgba(255,255,255,0.85)';
-  g.lineWidth = 8;
+  g.fillStyle = court;
+  roundRect(g, 64, 120, 872, 696, 28);
+  g.fill();
+  g.strokeStyle = line;
+  g.lineWidth = 7;
+  g.strokeRect(92, 148, 816, 640);
   g.beginPath();
-  g.moveTo(60, 230);
-  g.lineTo(940, 230);
-  g.moveTo(780, 230);
-  g.lineTo(780, 830);
+  g.moveTo(200, 148);
+  g.lineTo(200, 788);
+  g.moveTo(800, 148);
+  g.lineTo(800, 788);
   g.stroke();
 
-  // Burst logo.
-  g.save();
-  g.translate(250, 140);
-  g.rotate(-0.08);
-  g.fillStyle = ball;
-  g.beginPath();
-  const spikes = 18;
-  for (let i = 0; i < spikes * 2; i++) {
-    const r = i % 2 === 0 ? 120 : 92;
-    const a = (Math.PI * i) / spikes;
-    g.lineTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 0.8);
-  }
-  g.closePath();
-  g.fill();
-  g.fillStyle = ink;
-  g.font = `900 64px ${STICKER_FONT}, system-ui, sans-serif`;
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText('Saliiim!', 0, 4);
-  g.restore();
-
-  g.textAlign = 'left';
+  // Wordmark in the frame, like the app header.
   g.textBaseline = 'alphabetic';
+  g.textAlign = 'left';
+  g.font = font(800, 48);
   g.fillStyle = '#ffffff';
-  g.font = `700 40px ${STICKER_FONT}, system-ui, sans-serif`;
-  g.fillText(fit(g, `${d.session} · ${d.date}`, 680), 110, 310);
+  g.fillText('Saliiim', 92, 100);
+  const w = g.measureText('Saliiim').width;
+  g.fillStyle = ball;
+  g.fillText('!', 92 + w + 2, 100);
 
-  g.fillStyle = ink;
-  g.font = `800 28px ${STICKER_FONT}, system-ui, sans-serif`;
-  const w = g.measureText(d.label).width + 28;
-  g.fillRect(110, 340, w, 46);
+  // Result, centred on the court.
+  g.textAlign = 'center';
   g.fillStyle = '#ffffff';
-  g.fillText(d.label, 124, 373);
+  g.font = font(800, 26);
+  g.fillText(fit(g, d.label.toUpperCase().split('').join(String.fromCharCode(8202)), 560), 500, 260);
+  g.font = font(600, 30);
+  g.fillText(fit(g, `${d.session} · ${d.date}`, 560), 500, 306);
+  g.font = font(900, 96, true);
+  const lines = wrap(g, d.name.toUpperCase(), 560).slice(0, 2);
+  lines.forEach((l, i) => g.fillText(l, 500, 420 + i * 100));
 
-  g.font = `900 92px ${STICKER_FONT}, system-ui, sans-serif`;
-  const lines = wrap(g, d.name, 640).slice(0, 2);
-  lines.forEach((line, i) => g.fillText(line, 110, 480 + i * 100));
-
+  // Stat chips.
+  const top = lines.length > 1 ? 560 : 500;
   d.stats.forEach(([value, label], i) => {
-    const x = 110 + i * 215;
-    const y = 640;
-    g.fillStyle = i === d.stats.length - 1 ? ball : ink;
-    g.fillRect(x, y, 195, 130);
-    g.fillStyle = i === d.stats.length - 1 ? ink : '#ffffff';
-    g.font = `900 56px ${STICKER_FONT}, system-ui, sans-serif`;
-    g.fillText(value, x + 18, y + 68);
-    g.font = `600 22px ${STICKER_FONT}, system-ui, sans-serif`;
-    g.fillText(label, x + 18, y + 108);
+    const x = 220 + i * 190;
+    const hl = i === d.stats.length - 1;
+    g.fillStyle = hl ? ball : '#f4f5f9';
+    roundRect(g, x, top, 170, 120, 22);
+    g.fill();
+    g.fillStyle = ink;
+    g.font = font(900, 52, true);
+    g.fillText(value, x + 85, top + 64);
+    g.font = font(700, 20);
+    g.fillText(fit(g, label, 150), x + 85, top + 98);
   });
+
+  // A row of balls along the baseline.
+  for (let i = 0; i < 9; i++) drawBall(g, 250 + i * 62, 752, 20, ball);
   return c;
+}
+
+function drawBall(g: CanvasRenderingContext2D, x: number, y: number, r: number, color: string) {
+  g.fillStyle = color;
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#fdfdf8';
+  g.lineWidth = r * 0.14;
+  g.beginPath();
+  g.arc(x - r * 1.05, y, r * 0.75, -0.9, 0.9);
+  g.stroke();
+  g.beginPath();
+  g.arc(x + r * 1.05, y, r * 0.75, Math.PI - 0.9, Math.PI + 0.9);
+  g.stroke();
 }
 
 function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

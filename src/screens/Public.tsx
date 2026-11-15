@@ -137,9 +137,10 @@ function JoinView({ ctx, onWatch }: { ctx: SessionCtx; onWatch: () => void }) {
 
   return (
     <>
-      <p className="muted small">{t('invited', { host: hostName })}</p>
+      <section className="court-surface hero">
+      <p className="eyebrow">{t('invited', { host: hostName })}</p>
       <h1>{s.settings.name}</h1>
-      <p className="muted small">{formatLine(s, t)}</p>
+      <p>{formatLine(s, t)}</p>
       {!joining ? (
         <div className="actions column">
           <Btn kind="primary" icon="users" onClick={() => setJoining(true)}>
@@ -166,6 +167,7 @@ function JoinView({ ctx, onWatch }: { ctx: SessionCtx; onWatch: () => void }) {
           </Btn>
         </form>
       )}
+      </section>
       <section>
         <h3>{t('n_in', { n: listed.length })}</h3>
         <ul className="list">

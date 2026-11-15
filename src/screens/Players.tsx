@@ -196,6 +196,7 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
         </div>
       )}
 
+      <div className="cta-bar">
       {problem ? (
         <div className="box warn" role="alert">
           <p>{t(problem as 'need_2')}</p>
@@ -211,6 +212,7 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
       <Btn kind="primary" icon="play" onClick={onStart} disabled={!!problem}>
         {t('start')}
       </Btn>
+      </div>
 
       <Sheet open={courtside} onClose={() => setCourtside(false)} title={t('courtside_title')}>
         <p>{t('courtside_body', { n: s.settings.courts })}</p>
