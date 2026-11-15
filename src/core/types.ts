@@ -23,6 +23,11 @@ export interface Settings {
   scorerMode: ScorerMode;
   /** Cap on rounds; null means the default for the format. */
   maxRounds: number | null;
+  /**
+   * Rotating doubles with too few players for every court: play singles on the spare courts,
+   * or leave them empty. Missing on sessions created before this option, which means 'empty'.
+   */
+  spareCourts?: 'singles' | 'empty';
 }
 
 export const DEFAULT_RULES: Rules = {
@@ -42,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rules: DEFAULT_RULES,
   scorerMode: 'host',
   maxRounds: null,
+  spareCourts: 'singles',
 };
 
 export const MAX_PLAYERS = 16;

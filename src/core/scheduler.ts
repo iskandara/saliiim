@@ -60,19 +60,25 @@ export function recordRotation(stats: RotationStats, a: string[], b: string[]) {
 /**
  * Rotating doubles: each round, the players who have played least go on; partners are chosen
  * to avoid repeats, then pairs are matched to avoid repeat opponents. Deterministic.
+ *
+ * `spareCourts` (default 0): courts left over after the doubles matches of a round. Each one gets
+ * a singles match between players who would otherwise sit out (e.g. 7 players on 2 courts:
+ * 4 play doubles, 2 play singles, 1 rests). 0 keeps the original behaviour, which sessions
+ * created before this option depend on.
  */
-export function rotatingRounds(players: string[], rounds: number, startRound: number, stats: RotationStats): MatchSpec[] {
+export function rotatingRounds(players: string[], rounds: number, startRound: number, stats: RotationStats, spareCourts = 0): MatchSpec[] {
   const out: MatchSpec[] = [];
   const groups = Math.floor(players.length / 4);
   if (groups === 0) return out;
   for (let r = 0; r < rounds; r++) {
     const round = startRound + r;
     const offset = (round * 3) % players.length;
-    const ordered = players
+    const everyone = players
       .map((p, i) => ({ p, i: (i - offset + players.length) % players.length }))
       .sort((x, y) => (stats.played.get(x.p) ?? 0) - (stats.played.get(y.p) ?? 0) || x.i - y.i)
-      .map((x) => x.p)
-      .slice(0, groups * 4);
+      .map((x) => x.p);
+    const ordered = everyone.slice(0, groups * 4);
+    const resting = everyone.slice(groups * 4);
 
     const pairs: [string, string][] = [];
     const pool = [...ordered];
@@ -109,8 +115,37 @@ export function rotatingRounds(players: string[], rounds: number, startRound: nu
       recordRotation(stats, a, b);
       out.push({ round, a, b, unitA: a.join('+'), unitB: b.join('+') });
     }
+
+    for (let c = 0; c < spareCourts && resting.length >= 2; c++) {
+      const x = resting.shift()!;
+      let best = 0;
+      let bestScore = Infinity;
+      resting.forEach((y, i) => {
+        const s = stats.opponents.get(key(x, y)) ?? 0;
+        if (s < bestScore) {
+          bestScore = s;
+          best = i;
+        }
+      });
+      const [y] = resting.splice(best, 1);
+      recordRotation(stats, [x], [y!]);
+      out.push({ round, a: [x], b: [y!], unitA: x, unitB: y! });
+    }
   }
   return out;
+}
+
+/** How many courts can have a match at the same time with this many players. */
+export function usableCourts(settings: Pick<Settings, 'format' | 'partnerMode' | 'courts' | 'spareCourts'>, players: number): number {
+  let parallel: number;
+  if (settings.format === 'singles') parallel = Math.floor(players / 2);
+  else if (settings.partnerMode === 'fixed') parallel = Math.floor(Math.floor(players / 2) / 2);
+  else {
+    const doubles = Math.floor(players / 4);
+    const singles = settings.spareCourts === 'singles' ? Math.floor((players - doubles * 4) / 2) : 0;
+    parallel = doubles + singles;
+  }
+  return Math.min(settings.courts, parallel);
 }
 
 export function defaultRounds(settings: Pick<Settings, 'format' | 'partnerMode'>, unitCount: number): number {
@@ -121,7 +156,7 @@ export function defaultRounds(settings: Pick<Settings, 'format' | 'partnerMode'>
 }
 
 export interface ScheduleInput {
-  settings: Pick<Settings, 'format' | 'partnerMode' | 'maxRounds'>;
+  settings: Pick<Settings, 'format' | 'partnerMode' | 'maxRounds'> & Partial<Pick<Settings, 'courts' | 'spareCourts'>>;
   /** Players for singles and rotating doubles; pairs for fixed doubles. */
   units: Unit[];
   /** Round to number new matches from (1 for a fresh schedule). */
@@ -149,11 +184,13 @@ export function buildSchedule(input: ScheduleInput): MatchSpec[] {
   if (remaining <= 0) return [];
 
   if (rotating) {
+    const spare = settings.spareCourts === 'singles' ? Math.max(0, (settings.courts ?? 1) - Math.floor(units.length / 4)) : 0;
     return rotatingRounds(
       units.map((u) => u.id),
       remaining,
       startRound,
       input.stats ?? emptyStats(),
+      spare,
     );
   }
 

@@ -66,3 +66,7 @@ Win rate, then game difference per match, then games won. Win rate keeps it fair
 ## Data kept for M2
 
 Nothing is deleted in M1. Players carry stable ids and their claiming device, so M2 accounts can claim past matches, and head-to-head and partner stats can be built from the event log.
+
+## Changing the scheduler safely
+
+The schedule is rebuilt on every phone from the event log, so a scheduler change must not alter sessions that already started. New behaviour goes behind a setting saved in the session's `create` event, with a missing value meaning the old behaviour. Example: `spareCourts` (singles on spare courts) is `'singles'` for new sessions and missing, so `'empty'`, for older ones.

@@ -70,6 +70,9 @@ export function Setup() {
     [t('format'), t(s.format)],
     ...(s.format === 'doubles' ? [[t('partners'), t(s.partnerMode)] as [string, string]] : []),
     [t('courts'), String(s.courts)],
+    ...(s.format === 'doubles' && s.partnerMode === 'rotate' && s.courts > 1
+      ? [[t('spare_courts'), t(s.spareCourts === 'singles' ? 'spare_singles' : 'spare_empty')] as [string, string]]
+      : []),
     [t('match_ends'), t('first_to_n', { n: s.rules.gamesTo })],
     [t('at_deuce'), t(s.rules.deuce)],
     [t('at_all', { a: s.rules.gamesTo - 1 }), t(s.rules.margin === 'first_to' ? 'next_game_wins' : 'win_by_2')],
@@ -103,6 +106,13 @@ export function Setup() {
         <span className="field-label">{t('courts')}</span>
         <Stepper label={t('courts')} value={s.courts} min={1} max={MAX_COURTS} onChange={(n) => set('courts', n)} />
       </div>
+      {s.format === 'doubles' && s.partnerMode === 'rotate' && s.courts > 1 && (
+        <div className="field">
+          <span className="field-label">{t('spare_courts')}</span>
+          <Seg label={t('spare_courts')} value={s.spareCourts ?? 'empty'} options={[['singles', t('spare_singles')], ['empty', t('spare_empty')]]} onChange={(v) => set('spareCourts', v)} />
+          <span className="help">{t('spare_help')}</span>
+        </div>
+      )}
       <div className="field">
         <span className="field-label">{t('match_ends')}</span>
         <Seg label={t('match_ends')} value={s.rules.gamesTo} options={[[4, t('first_to_n', { n: 4 })], [6, t('first_to_n', { n: 6 })]]} onChange={(v) => setRule('gamesTo', v)} />

@@ -45,6 +45,18 @@ describe('session flow', () => {
     expect(table[0]!.wins).toBe(1);
   });
 
+  it('7 players, 2 courts, rotating doubles: both courts start at once', () => {
+    const { push } = log({ courts: 2, spareCourts: 'singles' }, ['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    const s = push({ type: 'start', payload: {} });
+    const c1 = liveMatchOnCourt(s, 1)!;
+    const c2 = liveMatchOnCourt(s, 2)!;
+    expect(c1.a.length).toBe(2);
+    expect(c2.a.length).toBe(1);
+    expect(new Set([...c1.a, ...c1.b, ...c2.a, ...c2.b]).size).toBe(6);
+    // Singles results count in the per-player standings.
+    expect(standings(s)).toHaveLength(7);
+  });
+
   it('points after the winning point are ignored until confirm', () => {
     const { push } = log({ format: 'singles', rules: { ...DEFAULT_SETTINGS.rules, deuce: 'no_ad' } }, ['a', 'b']);
     let s = push({ type: 'start', payload: {} });

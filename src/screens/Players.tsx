@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { estimateMinutes } from '../core/scheduler';
+import { estimateMinutes, usableCourts } from '../core/scheduler';
 import { activePlayers, previewMatchCount, startProblem, type SessionState } from '../core/session';
 import { useT } from '../i18n';
 import { saveRoster } from '../state';
@@ -180,6 +180,20 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
             {t('shuffle')}
           </Btn>
         </section>
+      )}
+
+      {!problem && usableCourts(s.settings, players.length) < s.settings.courts && (
+        <div className="box warn" role="status">
+          <p>{t('capacity_note', { n: players.length, c: usableCourts(s.settings, players.length), courts: s.settings.courts })}</p>
+          {s.settings.format === 'doubles' && s.settings.partnerMode === 'rotate' && s.settings.spareCourts !== 'singles' && <p className="small">{t('capacity_singles')}</p>}
+          <Btn
+            small
+            icon="grid"
+            onClick={() => run(() => append({ type: 'update_settings', payload: { settings: { ...s.settings, courts: Math.max(1, usableCourts(s.settings, players.length)) } } }))}
+          >
+            {t('use_n_courts', { c: Math.max(1, usableCourts(s.settings, players.length)) })}
+          </Btn>
+        </div>
       )}
 
       {problem ? (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildOrder, currentServer, setServer } from '../src/core/serve';
-import { buildSchedule, emptyStats, pairingKey, roundRobin, rotatingRounds } from '../src/core/scheduler';
+import { buildSchedule, emptyStats, pairingKey, roundRobin, rotatingRounds, usableCourts } from '../src/core/scheduler';
 import { rank } from '../src/core/standings';
 
 describe('serve rotation', () => {
@@ -56,6 +56,32 @@ describe('scheduler', () => {
     rotatingRounds(players, 6, 1, stats);
     const counts = players.map((p) => stats.played.get(p) ?? 0);
     expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+  });
+
+  it('7 players on 2 courts: spare court gets a singles match so both courts are used', () => {
+    const units = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map((id) => ({ id, players: [id] }));
+    const specs = buildSchedule({ settings: { format: 'doubles', partnerMode: 'rotate', maxRounds: 3, courts: 2, spareCourts: 'singles' }, units, startRound: 1 });
+    for (const round of [1, 2, 3]) {
+      const ms = specs.filter((m) => m.round === round);
+      expect(ms.map((m) => m.a.length + m.b.length).sort()).toEqual([2, 4]);
+      expect(new Set(ms.flatMap((m) => [...m.a, ...m.b])).size).toBe(6);
+    }
+  });
+
+  it('sessions created before the spare-court option keep their original schedule', () => {
+    const units = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map((id) => ({ id, players: [id] }));
+    const old = buildSchedule({ settings: { format: 'doubles', partnerMode: 'rotate', maxRounds: 3, courts: 2 }, units, startRound: 1 });
+    expect(old).toHaveLength(3);
+    expect(old.every((m) => m.a.length === 2)).toBe(true);
+  });
+
+  it('usable courts reflects how many matches can run at once', () => {
+    const base = { format: 'doubles' as const, partnerMode: 'rotate' as const, courts: 2 };
+    expect(usableCourts({ ...base, spareCourts: 'empty' }, 7)).toBe(1);
+    expect(usableCourts({ ...base, spareCourts: 'singles' }, 7)).toBe(2);
+    expect(usableCourts({ ...base, spareCourts: 'singles' }, 5)).toBe(1);
+    expect(usableCourts({ ...base, partnerMode: 'fixed' }, 6)).toBe(1);
+    expect(usableCourts({ format: 'singles', partnerMode: 'rotate', courts: 3 }, 5)).toBe(2);
   });
 
   it('regeneration skips pairings already played', () => {
