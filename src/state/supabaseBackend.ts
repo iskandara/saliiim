@@ -59,12 +59,13 @@ export class SupabaseBackend implements Backend {
     this.me ??= (async () => {
       const { data } = await this.client.auth.getSession();
       if (data.session) return data.session.user.id;
+      // If the challenge can't run (blocked script, no signal), still try without a token:
+      // Supabase decides whether a token is required, so this never weakens the protection.
       let token: string | undefined;
       try {
         token = this.captchaKey ? await getCaptchaToken(this.captchaKey) : undefined;
       } catch {
-        this.me = null; // let the next attempt retry the challenge
-        throw new BackendError('captcha_failed');
+        token = undefined;
       }
       const { data: signed, error } = await this.client.auth.signInAnonymously(token ? { options: { captchaToken: token } } : undefined);
       if (error || !signed.user) {
