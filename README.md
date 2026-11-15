@@ -50,7 +50,7 @@ npm run build
 3. **Database → Extensions:** enable **pg_cron** (used for auto-close).
 4. **SQL Editor:** paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
    Or with the CLI: `supabase link --project-ref <ref>` then `supabase db push`.
-5. **Project Settings → API:** copy the **Project URL** and the **anon public** key.
+5. **Project Settings → API Keys:** copy the **Project URL** and the **Publishable key** (starts with `sb_publishable_`). Supabase is retiring the old `anon` key by the end of 2026.
 
 Free-tier note: Supabase pauses free projects after a week with no activity. Open the dashboard to resume it.
 
@@ -58,10 +58,10 @@ Free-tier note: Supabase pauses free projects after a week with no activity. Ope
 
 1. **Workers & Pages → Create → Pages → Connect to Git**, pick this repository.
 2. Build command `npm run build`, output directory `dist`.
-3. Environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from step 1.5.
+3. Environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from step 1.5.
 4. Deploy. `public/_redirects` already sends every route to the app.
 
-The anon key is safe in the browser: all writes go through Postgres functions that check the caller's role, and row-level security limits reads to people who opened the session's link.
+The publishable key is safe in the browser: all writes go through Postgres functions that check the caller's role, and row-level security limits reads to people who opened the session's link.
 
 ## Project layout
 
