@@ -239,7 +239,7 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
 
       <div className="actions">
         {mine && ctx.role !== 'player' && (
-          <Btn icon="skip" onClick={() => (m.inputs.length ? setSkipAsk(true) : void send(() => append({ type: 'skip_match', payload: { matchId: m.id } }).then(() => nav(back))))}>
+          <Btn icon="skip" onClick={() => setSkipAsk(true)}>
             {t('skip')}
           </Btn>
         )}
@@ -262,7 +262,7 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
       </Sheet>
 
       <Sheet open={skipAsk} onClose={() => setSkipAsk(false)} title={t('skip_title')}>
-        <p>{t('skip_body', { a: sideName(s, m.a), b: sideName(s, m.b) })}</p>
+        <p>{t(m.inputs.length ? 'skip_body' : 'skip_body_unplayed', { a: sideName(s, m.a), b: sideName(s, m.b) })}</p>
         <div className="actions">
           <Btn icon="left" onClick={() => setSkipAsk(false)}>
             {t('cancel')}
@@ -273,7 +273,9 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
             onClick={() =>
               send(async () => {
                 setSkipAsk(false);
-                await append({ type: 'skip_match', payload: { matchId: m.id } });
+                const id = m.id;
+                await append({ type: 'skip_match', payload: { matchId: id } });
+                toast(t('skipped_toast'), { label: t('undo'), run: () => void send(() => append({ type: 'unskip_match', payload: { matchId: id } })) });
                 nav(back);
               })
             }

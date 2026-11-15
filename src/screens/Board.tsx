@@ -67,7 +67,7 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
       toast(t('skipped_toast'), { label: t('undo'), run: () => void run(() => append({ type: 'unskip_match', payload: { matchId: m.id } })) });
     });
 
-  const askSkip = (m: MatchState) => (m.inputs.length ? setSkipping(m) : void skip(m));
+  const askSkip = (m: MatchState) => setSkipping(m);
 
   return (
     <>
@@ -196,7 +196,9 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
       </div>
 
       <Sheet open={!!skipping} onClose={() => setSkipping(null)} title={t('skip_title')}>
-        {skipping && <p>{t('skip_body', { a: sideName(s, skipping.a), b: sideName(s, skipping.b) })}</p>}
+        {skipping && (
+          <p>{t(skipping.inputs.length ? 'skip_body' : 'skip_body_unplayed', { a: sideName(s, skipping.a), b: sideName(s, skipping.b) })}</p>
+        )}
         <div className="actions">
           <Btn icon="left" onClick={() => setSkipping(null)}>
             {t('cancel')}
