@@ -14,6 +14,7 @@ export function LiveBadge() {
 
 /** Compact two-row scoreboard used on the courts board, invite page and live view. */
 export function MiniScore({ s, m }: { s: SessionState; m: MatchState }) {
+  const t = useT();
   const labels = pointLabels(m.score);
   const finished = m.result;
   const rows: [string[], number, string][] = [
@@ -28,11 +29,17 @@ export function MiniScore({ s, m }: { s: SessionState; m: MatchState }) {
             <div className="mini-name">{sideName(s, side)}</div>
             {!finished && (
               <div className="mini-points">
-                <span>{m.score.tiebreak ? 'TB' : 'Pts'}</span> <b>{pts}</b>
+                <span>{m.score.tiebreak ? 'TB' : t('pts')}</span>{' '}
+                <b key={pts} className="flash">
+                  {pts}
+                </b>
               </div>
             )}
           </div>
-          <div className="mini-games">{games}</div>
+          {/* Re-keyed so a changed number rolls in, confirming the point landed. */}
+          <div className="mini-games digits" key={games}>
+            {games}
+          </div>
         </div>
       ))}
     </div>
@@ -75,7 +82,7 @@ export function NextUp({ s, render }: { s: SessionState; render?: (m: MatchState
         {q.map((m) => (
           <li key={m.id} className="row">
             <span>
-              {sideName(s, m.a)} <span className="muted">vs</span> {sideName(s, m.b)}
+              {sideName(s, m.a)} <span className="muted">{t('vs')}</span> {sideName(s, m.b)}
             </span>
             {render?.(m)}
           </li>
@@ -101,6 +108,25 @@ export function StandingsTable({ s, highlight, title }: { s: SessionState; highl
   const t = useT();
   const rows = standings(s);
   const fixed = s.settings.format === 'doubles' && s.settings.partnerMode === 'fixed';
+  // No results yet: list everyone unranked, so nobody looks like they lead.
+  if (!rows.some((r) => r.played > 0)) {
+    return (
+      <section>
+        {title && <h3>{title}</h3>}
+        <p className="box muted">{t('standings_empty')}</p>
+        <ul className="list unranked">
+          {rows.map((r) => (
+            <li key={r.unit} className={`row ${highlight === r.unit ? 'me' : ''}`}>
+              <span className="grow">
+                {unitName(s, r.unit)} {highlight === r.unit && <span className="muted">({t('you')})</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <HowStandings />
+      </section>
+    );
+  }
   return (
     <section>
       {title && <h3>{title}</h3>}
@@ -115,7 +141,7 @@ export function StandingsTable({ s, highlight, title }: { s: SessionState; highl
               </b>
               <span className="small">{t('played_gd', { p: r.played, gd: r.gameDiff > 0 ? `+${r.gameDiff}` : r.gameDiff })}</span>
             </span>
-            <span className="wins">
+            <span className="wins digits">
               {r.wins}-{r.losses}
             </span>
           </li>

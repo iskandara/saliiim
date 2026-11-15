@@ -33,6 +33,11 @@ export function LiveView({ s, slug, ownCard = false, tv = false }: { s: SessionS
           <StandingsTable s={s} title={t('standings')} />
         </div>
       </div>
+      {tv && (
+        <Link className="tv-exit" to={`/p/${slug}/live`}>
+          {t('exit_tv')}
+        </Link>
+      )}
       {!tv && (
         <Link className="btn ghost" to={`/p/${slug}/tv`}>
           <Icon name="tv" />

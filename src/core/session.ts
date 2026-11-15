@@ -501,7 +501,7 @@ export function reduceSession(events: SessionEvent[]): SessionState {
   return s;
 }
 
-/* ---------- Selectors ---------- */
+// Selectors
 
 export type Role = 'host' | 'co_host' | 'player' | 'spectator';
 
@@ -643,7 +643,7 @@ export function allMatchesFinished(s: SessionState): boolean {
   return s.status === 'live' && s.matches.length > 0 && s.matches.every((m) => m.status === 'done' || m.status === 'skipped');
 }
 
-/* ---------- Permissions (mirrored in supabase/migrations) ---------- */
+// Permissions (mirrored in supabase/migrations)
 
 export interface CourtLock {
   court: number;

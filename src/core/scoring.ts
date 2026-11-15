@@ -127,12 +127,3 @@ export function serveSlot(state: ScoreState): number {
   const tb = state.points[0] + state.points[1];
   return games + Math.floor((tb + 1) / 2);
 }
-
-/** Short summary for the rules, used on setup and the scorer header. */
-export function describeRules(rules: Rules): string {
-  const deuce = { one_deuce: 'One deuce', advantage: 'Advantage', no_ad: 'No-ad' }[rules.deuce];
-  const margin = rules.margin === 'first_to' ? `first to ${rules.gamesTo}` : `win by 2 from ${rules.gamesTo}`;
-  const tbAt = rules.margin === 'first_to' ? rules.gamesTo - 1 : rules.gamesTo;
-  const tb = rules.tiebreak ? `tiebreak to ${rules.tiebreakTo} at ${tbAt}-${tbAt}` : 'no tiebreak';
-  return `${deuce} · ${margin} · ${tb}`;
-}

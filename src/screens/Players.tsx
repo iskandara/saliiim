@@ -38,6 +38,7 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
   const [name, setName] = useState('');
   const [courtside, setCourtside] = useState(false);
   const [moved, setMoved] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   if (s.status !== 'draft') return <Navigate to={`/s/${sessionId}`} replace />;
 
@@ -64,15 +65,14 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
       await append({ type: 'add_player', payload: { id: newId(), name: n, via: 'manual' } });
     });
 
-  const swap = (pairIdx: number, col: 0 | 1, dir: -1 | 1) =>
+  // Tap one name, then another, to swap their places in the pairs.
+  const pick = (id: string) =>
     run(async () => {
-      const next = pairs.map((p) => [...p] as [string, string]);
-      const other = pairIdx + dir;
-      if (!next[other]) return;
-      const a = next[pairIdx]![col];
-      next[pairIdx]![col] = next[other]![col];
-      next[other]![col] = a;
-      setMoved(a);
+      if (!selected) return setSelected(id);
+      if (selected === id) return setSelected(null);
+      const next = pairs.map((p) => p.map((x) => (x === selected ? id : x === id ? selected : x)) as [string, string]);
+      setSelected(null);
+      setMoved(id);
       setTimeout(() => setMoved(null), 900);
       await append({ type: 'set_pairs', payload: { pairs: next } });
     });
@@ -155,27 +155,27 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
       {fixed && pairs.length > 0 && (
         <section>
           <h3>{t('pairs')}</h3>
-          <p className="muted small">{t('pairs_help')}</p>
+          <p className="muted small">{t('pairs_tap_help')}</p>
           <ol className="pairs">
             {pairs.map((pair, i) => (
               <li key={i}>
                 <span className="num">{i + 1}</span>
-                {([0, 1] as const).map((col) => (
-                  <span key={col} className={`pair-cell ${moved === pair[col] ? 'moved' : ''}`}>
-                    <span className="grow">{nameOf(pair[col])}</span>
-                    <span className="arrows">
-                      <button aria-label={`${nameOf(pair[col])} up`} disabled={i === 0} onClick={() => swap(i, col, -1)}>
-                        <Icon name="up" size={14} />
-                      </button>
-                      <button aria-label={`${nameOf(pair[col])} down`} disabled={i === pairs.length - 1} onClick={() => swap(i, col, 1)}>
-                        <Icon name="down" size={14} />
-                      </button>
-                    </span>
-                  </span>
+                {pair.map((pid) => (
+                  <button
+                    key={pid}
+                    className={`pair-cell ${moved === pid ? 'moved' : ''} ${selected === pid ? 'selected' : ''}`}
+                    aria-pressed={selected === pid}
+                    onClick={() => void pick(pid)}
+                  >
+                    {nameOf(pid)}
+                  </button>
                 ))}
               </li>
             ))}
           </ol>
+          <p className="small" aria-live="polite">
+            {selected ? t('swap_with', { name: nameOf(selected) }) : ''}
+          </p>
           <Btn icon="shuffle" onClick={shuffle}>
             {t('shuffle')}
           </Btn>

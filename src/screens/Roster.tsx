@@ -63,7 +63,7 @@ function RosterBody({ ctx }: { ctx: SessionCtx }) {
               {p.status === 'active' && (
                 <span className="row-actions">
                   {role === 'host' && p.deviceId && !isHost && !cohost && (
-                    <Btn small icon="star" onClick={() => run(() => append({ type: 'promote', payload: { playerId: p.id } }))}>
+                    <Btn small icon="crown" onClick={() => run(() => append({ type: 'promote', payload: { playerId: p.id } }))}>
                       {t('make_cohost')}
                     </Btn>
                   )}

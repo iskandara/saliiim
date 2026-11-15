@@ -33,7 +33,7 @@ Each phone signs in to Supabase **anonymously**. Its user id is the device id. R
 |---|---|
 | host | Created the session, or opened the private host link (`/h/:id#key`) |
 | co_host | Promoted by the host (must have claimed a player) |
-| player | Joined with a name or tapped "That's me" — the name is then locked to that phone |
+| player | Joined with a name or tapped "That's me"; the name is then locked to that phone |
 | spectator | Opened the public link (`/p/:slug`) |
 
 ## Who can write what

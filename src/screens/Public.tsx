@@ -8,7 +8,8 @@ import { useT } from '../i18n';
 import { backend, remember } from '../state';
 import { newId } from '../state/backend';
 import { errorCode, useSession, type SessionCtx } from '../state/useSession';
-import { Btn, Field, Icon, Page, useToast } from '../ui/kit';
+import { Btn, Field, Icon, Page, useToast, type HeaderSize } from '../ui/kit';
+import { LoadError } from './HostGate';
 import { CourtsList, LiveBadge, MiniScore, Notices, StandingsTable } from '../ui/session-ui';
 import { LiveView } from './LiveView';
 import { Scorer } from './Scorer';
@@ -29,24 +30,40 @@ function usePublic(slug: string) {
   return { ctx: useSession(id), err };
 }
 
-function PublicGate({ children, wide }: { children: (ctx: SessionCtx, slug: string) => ReactNode; wide?: boolean }) {
+function PublicGate({ children, wide, header }: { children: (ctx: SessionCtx, slug: string) => ReactNode; wide?: boolean; header?: (ctx: SessionCtx) => HeaderSize }) {
   const { slug = '' } = useParams();
   const { ctx, err } = usePublic(slug);
   const t = useT();
-  if (err || ctx.error === 'not_found') {
+  if (err === 'anonymous_auth_disabled') return <Page><p className="box warn">{t('anonymous_auth_disabled')}</p></Page>;
+  if (err === 'not_found' || (ctx.ready && ctx.state.status === 'empty' && (!ctx.error || ctx.error === 'not_found'))) {
     return (
       <Page>
-        <p className="box">{err === 'anonymous_auth_disabled' ? t('anonymous_auth_disabled') : t('not_found')}</p>
-        <Link to="/">{t('back_home')}</Link>
+        <p className="box">{t('not_found')}</p>
+        <Link className="btn ghost" to="/">
+          <Icon name="left" />
+          <span>{t('back_home')}</span>
+        </Link>
       </Page>
     );
   }
+  if (err) return <LoadError code={err} />;
+  if (ctx.ready && ctx.state.status === 'empty' && ctx.error) return <LoadError code={ctx.error} />;
   if (!ctx.ready || ctx.state.status === 'empty') return <Page>{t('loading')}</Page>;
-  return <Page wide={wide}>{children(ctx, slug)}</Page>;
+  return (
+    <Page wide={wide} header={header?.(ctx) ?? 'compact'}>
+      {ctx.error === 'offline' && <p className="notice">{t('error_offline')}</p>}
+      {children(ctx, slug)}
+    </Page>
+  );
 }
 
 export function PublicHome() {
-  return <PublicGate>{(ctx, slug) => <PublicHomeBody ctx={ctx} slug={slug} />}</PublicGate>;
+  // The full masthead greets people arriving from the link; players and the summary get the compact one.
+  return (
+    <PublicGate header={(ctx) => (ctx.me || ctx.state.status === 'closed' ? 'compact' : 'full')}>
+      {(ctx, slug) => <PublicHomeBody ctx={ctx} slug={slug} />}
+    </PublicGate>
+  );
 }
 
 export function PublicLive() {
@@ -54,12 +71,16 @@ export function PublicLive() {
 }
 
 export function PublicTV() {
-  return <PublicGate wide>{(ctx, slug) => <LiveView s={ctx.state} slug={slug} tv />}</PublicGate>;
+  return (
+    <PublicGate wide header={() => 'none'}>
+      {(ctx, slug) => <LiveView s={ctx.state} slug={slug} tv />}
+    </PublicGate>
+  );
 }
 
 export function PublicScorer() {
   const { n = '1' } = useParams();
-  return <PublicGate>{(ctx, slug) => <Scorer ctx={ctx} court={Number(n)} back={`/p/${slug}`} />}</PublicGate>;
+  return <PublicGate>{(ctx, slug) => <Scorer ctx={ctx} court={Number(n)} back={`/p/${slug}`} backLabel="back_status" />}</PublicGate>;
 }
 
 function PublicHomeBody({ ctx, slug }: { ctx: SessionCtx; slug: string }) {

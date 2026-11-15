@@ -10,7 +10,7 @@ export function Home() {
   const history = readHistory();
   const lastHosted = history.find((h) => h.role === 'host');
   return (
-    <Page>
+    <Page header="full">
       <h1>{t('home_title')}</h1>
       <p className="muted">{t('home_sub')}</p>
       <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>

@@ -9,7 +9,11 @@ import { CourtsList, LiveBadge, NextUp, Notices, ProgressLine } from '../ui/sess
 import { HostGate } from './HostGate';
 
 export function Board() {
-  return <HostGate>{(ctx) => <BoardBody ctx={ctx} />}</HostGate>;
+  return (
+    <HostGate wide>
+      {(ctx) => <BoardBody ctx={ctx} />}
+    </HostGate>
+  );
 }
 
 const dismissedKey = (id: string) => `saliiim:hostlink-dismissed:${id}`;
@@ -138,61 +142,81 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
         </section>
       )}
 
-      <CourtsList
-        s={s}
-        render={(court, m) =>
-          m && (
-            <div className="actions">
-              <Btn kind="primary" icon={m.inputs.length ? 'play' : 'edit'} onClick={() => nav(`/s/${id}/court/${court}`)}>
-                {m.inputs.length ? t('resume_match') : t('start_match')}
-              </Btn>
-              <Btn icon="skip" onClick={() => askSkip(m)}>
+      <div className="board-layout">
+        <div className="board-main">
+          <CourtsList
+            s={s}
+            render={(court, m) =>
+              m && (
+                <div className="actions">
+                  <Link className="btn primary" to={`/s/${id}/court/${court}`} viewTransition>
+                    <Icon name={m.inputs.length ? 'play' : 'edit'} />
+                    <span>{m.inputs.length ? t('resume_match') : t('start_match')}</span>
+                  </Link>
+                  <Btn icon="skip" onClick={() => askSkip(m)}>
+                    {t('skip')}
+                  </Btn>
+                </div>
+              )
+            }
+          />
+        </div>
+
+        <aside className="board-side">
+          <NextUp
+            s={s}
+            render={(m) => (
+              <button className="link-btn" onClick={() => askSkip(m)}>
                 {t('skip')}
+              </button>
+            )}
+          />
+
+          <section>
+            <h3>{t('share')}</h3>
+            <div className="btn-row">
+              <Btn
+                icon="link"
+                onClick={async () => {
+                  if (await copyText(absUrl(`/p/${s.slug}`))) toast(t('copied'));
+                }}
+              >
+                {t('copy_public')}
               </Btn>
+              {hostLink && role === 'host' && !showLink && (
+                <Btn icon="key" onClick={() => setShowLink(true)}>
+                  {t('hostlink_btn')}
+                </Btn>
+              )}
             </div>
-          )
-        }
-      />
+          </section>
 
-      <NextUp
-        s={s}
-        render={(m) => (
-          <button className="link-btn" onClick={() => askSkip(m)}>
-            {t('skip')}
-          </button>
-        )}
-      />
+          <section>
+            <h3>{t('manage')}</h3>
+            <div className="stack tight">
+              <Link className="btn ghost" to={`/s/${id}/roster`} viewTransition>
+                <Icon name="users" />
+                <span>{t('roster_btn')}</span>
+              </Link>
+              <Link className="btn ghost" to={`/s/${id}/summary`} viewTransition>
+                <Icon name="trophy" />
+                <span>{t('all_results')}</span>
+              </Link>
+              {s.settings.scorerMode === 'host' && (
+                <Btn icon="users" onClick={() => setHanding(true)}>
+                  {t('hand_btn')}
+                </Btn>
+              )}
+            </div>
+          </section>
 
-      <div className="stack">
-        <Link className="btn ghost" to={`/s/${id}/roster`}>
-          <Icon name="users" />
-          <span>{t('roster_btn')}</span>
-        </Link>
-        <Link className="btn ghost" to={`/s/${id}/summary`}>
-          <Icon name="trophy" />
-          <span>{t('all_results')}</span>
-        </Link>
-        <Btn
-          icon="radio"
-          onClick={async () => {
-            if (await copyText(absUrl(`/p/${s.slug}`))) toast(t('copied'));
-          }}
-        >
-          {t('copy_public')}
-        </Btn>
-        {hostLink && role === 'host' && !showLink && (
-          <Btn icon="key" onClick={() => setShowLink(true)}>
-            {t('hostlink_btn')}
-          </Btn>
-        )}
-        {s.settings.scorerMode === 'host' && (
-          <Btn icon="users" onClick={() => setHanding(true)}>
-            {t('hand_btn')}
-          </Btn>
-        )}
-        <Btn icon="lock" onClick={() => setClosing(true)}>
-          {t('close_btn')}
-        </Btn>
+          <section className="end-session">
+            <h3>{t('end_session')}</h3>
+            <Btn kind="dark" icon="lock" onClick={() => setClosing(true)}>
+              {t('close_btn')}
+            </Btn>
+          </section>
+        </aside>
       </div>
 
       <Sheet open={!!skipping} onClose={() => setSkipping(null)} title={t('skip_title')}>

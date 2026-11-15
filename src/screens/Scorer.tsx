@@ -10,7 +10,7 @@ import { errorCode, type SessionCtx } from '../state/useSession';
 import { Btn, Icon, Sheet, useToast } from '../ui/kit';
 
 /** Scoring screen for one court. Used by the host (/s/:id/court/:n) and players (/p/:slug/court/:n). */
-export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; back: string }) {
+export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: SessionCtx; court: number; back: string; backLabel?: 'back_courts' | 'back_status' }) {
   const { state: s, device, locks, append, sessionId } = ctx;
   const t = useT();
   const toast = useToast();
@@ -85,7 +85,7 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
         <p className="box muted">{t('no_match')}</p>
         <Link className="btn ghost" to={back}>
           <Icon name="left" />
-          <span>{t('back_courts')}</span>
+          <span>{t(backLabel)}</span>
         </Link>
       </>
     );
@@ -190,11 +190,17 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
         </div>
       )}
 
-      <div className={`board ${!mine || m.status !== 'live' || needServer || pickServer ? 'dim' : ''}`}>
+      {!mine && (
+        <p className="view-only">
+          <Icon name="lock" size={14} /> {t('view_only_label')}
+        </p>
+      )}
+      {/* Inactive boards keep full contrast; only the tap hints disappear. */}
+      <div className={`board ${!mine || m.status !== 'live' || needServer || pickServer ? 'inactive' : ''}`}>
         {sides.map(([team, side]) => (
           <button
             key={team}
-            className={`team ${team === 1 ? 'alt' : ''}`}
+            className={`team ${team === 1 ? 'alt' : ''} ${m.status === 'pending' && m.score.winner === team ? 'won' : ''}`}
             disabled={!mine || m.status !== 'live' || needServer || pickServer}
             aria-label={t('add_point_for', { team: sideName(s, side) })}
             onClick={() => void point(team)}
@@ -204,9 +210,14 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
             </span>
             {mine && m.status === 'live' && <span className="tap">{t('tap_to_score')}</span>}
             <span className="team-points">
-              {m.score.tiebreak ? 'TB' : t('points')} <b>{labels[team]}</b>
+              {m.score.tiebreak ? 'TB' : t('points')}{' '}
+              <b key={labels[team]} className="flash">
+                {labels[team]}
+              </b>
             </span>
-            <span className="team-games">{m.score.games[team]}</span>
+            <span className="team-games digits" key={m.score.games[team]}>
+              {m.score.games[team]}
+            </span>
           </button>
         ))}
       </div>
@@ -245,7 +256,7 @@ export function Scorer({ ctx, court, back }: { ctx: SessionCtx; court: number; b
         )}
         <Link className="btn ghost" to={back}>
           <Icon name="grid" />
-          <span>{t('back_courts')}</span>
+          <span>{t(backLabel)}</span>
         </Link>
       </div>
 

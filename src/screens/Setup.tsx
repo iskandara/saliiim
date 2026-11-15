@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { describeRules } from '../core/scoring';
 import { DEFAULT_SETTINGS, MAX_COURTS, type Rules, type Settings } from '../core/types';
 import { useT } from '../i18n';
 import { backend, lastRoster, remember } from '../state';
@@ -36,6 +35,11 @@ export function Setup() {
   const hostErr = tried && !s.hostName.trim() ? t('your_name_err') : null;
   const nameErr = tried && !s.name.trim() ? t('session_name_err') : null;
   const tbAt = s.rules.margin === 'first_to' ? s.rules.gamesTo - 1 : s.rules.gamesTo;
+  const rulesSummary = [
+    t(s.rules.deuce),
+    t(s.rules.margin === 'first_to' ? 'rules_margin_first' : 'rules_margin_by2', { n: s.rules.gamesTo }),
+    s.rules.tiebreak ? t('rules_tb', { to: s.rules.tiebreakTo, a: tbAt }) : t('rules_no_tb'),
+  ].join(' · ');
 
   const next = () => {
     setTried(true);
@@ -82,7 +86,7 @@ export function Setup() {
   ];
 
   return (
-    <Page>
+    <Page header="full">
       <h1>{t('new_session')}</h1>
       <Field label={t('your_name')} error={hostErr}>
         <input id="host-name" value={s.hostName} maxLength={40} placeholder={t('your_name_ph')} onChange={(e) => set('hostName', e.target.value)} />
@@ -122,7 +126,7 @@ export function Setup() {
         <button className="how-toggle" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}>
           <span>
             <b>{t('advanced')}</b>
-            <span className="small muted">{describeRules(s.rules)}</span>
+            <span className="small muted">{rulesSummary}</span>
           </span>
           <Icon name={advanced ? 'up' : 'down'} />
         </button>

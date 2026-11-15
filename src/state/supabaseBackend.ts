@@ -91,7 +91,7 @@ export class SupabaseBackend implements Backend {
     await this.rpc('claim_player', { p_session: sessionId, p_player_id: playerId });
   }
 
-  /* ----- offline queue ----- */
+  // Offline queue
 
   private qKey = (sessionId: string) => `saliiim:queue:${sessionId}`;
 
@@ -157,7 +157,7 @@ export class SupabaseBackend implements Backend {
     }
   }
 
-  /* ----- locks ----- */
+  // Locks
 
   async acquireLock(sessionId: string, court: number, matchId: string, force: boolean) {
     return this.rpc<LockResult>('acquire_lock', { p_session: sessionId, p_court: court, p_match_id: matchId, p_force: force });
@@ -171,7 +171,7 @@ export class SupabaseBackend implements Backend {
     await this.rpc('release_lock', { p_session: sessionId, p_court: court }).catch(() => undefined);
   }
 
-  /* ----- live feed ----- */
+  // Live feed
 
   subscribe(sessionId: string, cb: (feed: SessionFeed) => void) {
     let events: SessionEvent[] = [];

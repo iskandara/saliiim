@@ -6,6 +6,8 @@ export interface StickerData {
   stats: [string, string][];
 }
 
+export const STICKER_FONT = "'Archivo Variable'";
+
 /** 1000 x 880 transparent PNG for Instagram Stories: the logo burst over a court card. */
 export function drawSticker(d: StickerData): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -44,7 +46,7 @@ export function drawSticker(d: StickerData): HTMLCanvasElement {
   g.closePath();
   g.fill();
   g.fillStyle = ink;
-  g.font = '900 64px system-ui, sans-serif';
+  g.font = `900 64px ${STICKER_FONT}, system-ui, sans-serif`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('Saliiim!', 0, 4);
@@ -53,17 +55,17 @@ export function drawSticker(d: StickerData): HTMLCanvasElement {
   g.textAlign = 'left';
   g.textBaseline = 'alphabetic';
   g.fillStyle = '#ffffff';
-  g.font = '700 40px system-ui, sans-serif';
+  g.font = `700 40px ${STICKER_FONT}, system-ui, sans-serif`;
   g.fillText(fit(g, `${d.session} · ${d.date}`, 680), 110, 310);
 
   g.fillStyle = ink;
-  g.font = '800 28px system-ui, sans-serif';
+  g.font = `800 28px ${STICKER_FONT}, system-ui, sans-serif`;
   const w = g.measureText(d.label).width + 28;
   g.fillRect(110, 340, w, 46);
   g.fillStyle = '#ffffff';
   g.fillText(d.label, 124, 373);
 
-  g.font = '900 92px system-ui, sans-serif';
+  g.font = `900 92px ${STICKER_FONT}, system-ui, sans-serif`;
   const lines = wrap(g, d.name, 640).slice(0, 2);
   lines.forEach((line, i) => g.fillText(line, 110, 480 + i * 100));
 
@@ -73,9 +75,9 @@ export function drawSticker(d: StickerData): HTMLCanvasElement {
     g.fillStyle = i === d.stats.length - 1 ? ball : ink;
     g.fillRect(x, y, 195, 130);
     g.fillStyle = i === d.stats.length - 1 ? ink : '#ffffff';
-    g.font = '900 56px system-ui, sans-serif';
+    g.font = `900 56px ${STICKER_FONT}, system-ui, sans-serif`;
     g.fillText(value, x + 18, y + 68);
-    g.font = '600 22px system-ui, sans-serif';
+    g.font = `600 22px ${STICKER_FONT}, system-ui, sans-serif`;
     g.fillText(label, x + 18, y + 108);
   });
   return c;

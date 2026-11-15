@@ -11,7 +11,9 @@
   --ball-ink: #0f2a17;
   --danger: #b3261e;
   --warn-bg: #fff4d6;
-  --shadow: 0 1px 0 rgba(15, 42, 23, 0.08);
+  --focus: #0f2a17;
+  --display: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
 }
 
@@ -27,6 +29,7 @@
     --green-2: #245e33;
     --warn-bg: #3a3317;
     --danger: #ff8a80;
+    --focus: #d9f03a;
     color-scheme: dark;
   }
 }
@@ -41,6 +44,7 @@
   --green-2: #245e33;
   --warn-bg: #3a3317;
   --danger: #ff8a80;
+  --focus: #d9f03a;
   color-scheme: dark;
 }
 
@@ -58,16 +62,32 @@ body {
 a {
   color: inherit;
 }
+h1,
+h2,
+.burst,
+.tagline,
+.digits,
+.sheet h2 {
+  font-family: var(--display);
+}
 h1 {
-  font-size: 2rem;
-  line-height: 1.1;
+  font-size: clamp(1.9rem, 1.3rem + 2.6vw, 2.9rem);
+  line-height: 1;
   letter-spacing: -0.03em;
   margin: 8px 0 6px;
-  font-weight: 900;
+  font-weight: 850;
+  font-stretch: 95%;
 }
 h2 {
-  font-size: 1.25rem;
+  font-size: clamp(1.2rem, 1rem + 1vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   margin: 0;
+}
+/* Scoreboard numbers: same-width digits so scores don't shift as they change. */
+.digits {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 h3 {
   font-size: 0.95rem;
@@ -85,7 +105,7 @@ p {
   font-size: 0.85rem;
 }
 
-/* ---------- layout ---------- */
+/* Layout */
 .app {
   max-width: 560px;
   margin: 0 auto;
@@ -120,7 +140,7 @@ p {
   text-align: center;
 }
 
-/* ---------- masthead ---------- */
+/* Masthead */
 .masthead {
   background:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 6px),
@@ -136,11 +156,10 @@ p {
 }
 .tagline {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1.15;
   max-width: 14ch;
-  text-decoration: none;
-  color: #fff;
+  margin: 0;
 }
 .burst {
   background: var(--ball);
@@ -151,6 +170,10 @@ p {
   text-decoration: none;
   transform: rotate(-4deg);
   clip-path: polygon(50% 0, 58% 14%, 74% 4%, 76% 20%, 95% 16%, 88% 34%, 100% 50%, 88% 64%, 95% 84%, 76% 80%, 74% 96%, 58% 86%, 50% 100%, 42% 86%, 26% 96%, 24% 80%, 5% 84%, 12% 64%, 0 50%, 12% 34%, 5% 16%, 24% 20%, 26% 4%, 42% 14%);
+}
+.burst.small {
+  font-size: 1.15rem;
+  padding: 10px 16px;
 }
 .net {
   height: 26px;
@@ -171,10 +194,35 @@ p {
   width: 6px;
   background: #fff;
 }
+/* Compact header during a session: one line, net reduced to the white tape. */
+.masthead.compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 4px solid #fff;
+}
+.masthead.compact .icon-btn,
+.masthead.compact .lang {
+  border-color: #fff;
+}
+.masthead.compact .icon-btn,
+.masthead.compact .lang button {
+  background: transparent;
+  color: #fff;
+}
+.masthead.compact .lang button[aria-pressed='true'] {
+  background: var(--ball);
+  color: var(--ball-ink);
+}
 .prefs {
   display: flex;
-  justify-content: flex-end;
   gap: 6px;
+}
+.prefs-row {
+  display: flex;
+  justify-content: flex-end;
   padding: 8px 16px 0;
   background: var(--bg);
 }
@@ -184,12 +232,13 @@ p {
 }
 .lang button {
   border: 0;
-  background: transparent;
+  background: var(--surface);
   color: var(--ink);
   font-weight: 800;
-  font-size: 0.75rem;
-  padding: 6px 10px;
-  min-height: 32px;
+  font-size: 0.8rem;
+  padding: 0 12px;
+  min-height: 44px;
+  min-width: 44px;
   cursor: pointer;
 }
 .lang button[aria-pressed='true'] {
@@ -200,14 +249,27 @@ p {
   border: 2px solid var(--line);
   background: var(--surface);
   color: var(--ink);
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   display: inline-grid;
   place-items: center;
   cursor: pointer;
 }
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -200px;
+  z-index: 60;
+  background: var(--ball);
+  color: var(--ball-ink);
+  font-weight: 800;
+  padding: 12px 16px;
+}
+.skip-link:focus {
+  top: 8px;
+}
 
-/* ---------- controls ---------- */
+/* Controls */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -225,7 +287,7 @@ p {
   white-space: nowrap;
 }
 .btn.small {
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 10px;
   font-size: 0.85rem;
   gap: 6px;
@@ -250,10 +312,11 @@ p {
 button:focus-visible,
 input:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--ball);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 .link-btn {
+  min-width: 44px;
   border: 0;
   background: none;
   color: inherit;
@@ -376,7 +439,7 @@ a:focus-visible {
   margin-top: 16px;
 }
 
-/* ---------- boxes and lists ---------- */
+/* Boxes and lists */
 .box,
 .card {
   border: 2px solid var(--line);
@@ -507,7 +570,7 @@ a:focus-visible {
   font-weight: 800;
 }
 
-/* ---------- pairs ---------- */
+/* Pairs */
 .pairs {
   list-style: none;
   padding: 0;
@@ -523,46 +586,31 @@ a:focus-visible {
   align-items: center;
 }
 .pair-cell {
-  display: flex;
-  align-items: center;
+  min-height: 48px;
+  min-width: 0;
   border: 2px solid var(--line);
   background: var(--surface);
-  padding-left: 8px;
-  min-width: 0;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
   transition: background 0.3s;
+}
+.pair-cell.selected {
+  background: var(--ink);
+  color: var(--bg);
 }
 .pair-cell.moved {
   background: var(--ball);
   color: var(--ball-ink);
 }
-.pair-cell .grow {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.arrows {
-  display: flex;
-  flex-direction: column;
-}
-.arrows button {
-  border: 0;
-  border-left: 2px solid var(--line);
-  background: transparent;
-  color: inherit;
-  width: 36px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-.arrows button + button {
-  border-top: 2px solid var(--line);
-}
-.arrows button:disabled {
-  opacity: 0.3;
-}
 
-/* ---------- courts ---------- */
+/* Courts */
 .head {
   display: flex;
   justify-content: space-between;
@@ -570,7 +618,7 @@ a:focus-visible {
   gap: 8px;
 }
 .live-badge {
-  color: #d32f2f;
+  color: var(--danger);
   font-weight: 900;
   font-size: 0.8rem;
   white-space: nowrap;
@@ -616,12 +664,13 @@ a:focus-visible {
   font-size: 1.05rem;
 }
 .mini-games {
+  font-family: var(--display);
   font-size: 3.6rem;
   font-weight: 900;
   line-height: 1;
 }
 
-/* ---------- standings ---------- */
+/* Standings */
 .standings {
   list-style: none;
   padding: 0;
@@ -712,7 +761,7 @@ a:focus-visible {
   margin-top: 4px;
 }
 
-/* ---------- results ---------- */
+/* Results */
 .results {
   list-style: none;
   padding: 0;
@@ -757,7 +806,7 @@ a:focus-visible {
   font-weight: 700;
 }
 
-/* ---------- scorer ---------- */
+/* Scorer */
 .scorer {
   display: flex;
   flex-direction: column;
@@ -794,8 +843,19 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
 }
-.board.dim {
-  opacity: 0.6;
+.board.inactive .tap {
+  display: none;
+}
+.view-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  border: 2px solid var(--line);
+  padding: 4px 10px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin: 0;
 }
 .team {
   position: relative;
@@ -842,6 +902,7 @@ a:focus-visible {
   font-size: 1.4rem;
 }
 .team-games {
+  font-family: var(--display);
   position: absolute;
   right: 14px;
   top: 50%;
@@ -905,7 +966,7 @@ a:focus-visible {
   justify-content: center;
 }
 
-/* ---------- summary ---------- */
+/* Summary */
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -959,7 +1020,7 @@ a:focus-visible {
   text-align: right;
 }
 
-/* ---------- live view ---------- */
+/* Live view */
 .only-phone {
   margin-top: 8px;
 }
@@ -993,12 +1054,14 @@ a:focus-visible {
   font-size: 2rem;
 }
 
-/* ---------- tabs, sheets, toasts ---------- */
+/* Tabs, sheets, toasts */
 .tabs {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  max-width: 560px;
+  margin: 0 auto;
   display: flex;
   justify-content: center;
   background: var(--surface);
@@ -1080,6 +1143,7 @@ a:focus-visible {
   pointer-events: auto;
 }
 .toast-action {
+  min-height: 44px;
   background: var(--ball);
   color: var(--ball-ink);
   border: 0;
@@ -1088,13 +1152,162 @@ a:focus-visible {
   padding: 6px 10px;
   cursor: pointer;
 }
+
+/* Pressed feedback: every tap visibly registers. */
+.btn,
+.seg button,
+.link-btn,
+.pick,
+.icon-btn,
+.lang button,
+.stepper button,
+.pair-cell,
+.undo-bar,
+.tabs a,
+.toast-action {
+  transition: transform 100ms ease-out, filter 100ms ease-out;
+}
+.btn:active:not(:disabled),
+.seg button:active,
+.link-btn:active,
+.pick:active,
+.icon-btn:active,
+.lang button:active,
+.stepper button:active:not(:disabled),
+.pair-cell:active,
+.undo-bar:active:not(:disabled),
+.tabs a:active,
+.toast-action:active {
+  transform: translateY(1px);
+  filter: brightness(0.92);
+}
+
+/* Motion with a job: a changed score rolls in, a changed point flashes, the winning side sweeps. */
+@keyframes roll {
+  from {
+    translate: 0 35%;
+    opacity: 0;
+  }
+  to {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+@keyframes flash {
+  from {
+    background: var(--ball);
+    color: var(--ball-ink);
+  }
+}
+@keyframes sweep {
+  0% {
+    box-shadow: inset 0 0 0 0 var(--ball);
+  }
+  45% {
+    box-shadow: inset 1200px 0 0 0 var(--ball);
+  }
+  100% {
+    box-shadow: inset 0 0 0 6px var(--ball);
+  }
+}
+.mini-games,
+.team-games {
+  animation: roll 250ms var(--ease-out);
+}
+.flash {
+  animation: flash 450ms ease-out;
+  padding: 0 3px;
+}
+.team.won {
+  animation: sweep 700ms var(--ease-out) forwards;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+
+/* Board: courts and the side column next to each other on tablets and laptops. */
+.board-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn-row > * {
+  flex: 1 1 auto;
+}
+.stack.tight {
+  margin-top: 0;
+}
+.end-session .btn {
+  width: 100%;
+}
+.app.wide .tabs {
+  max-width: 1200px;
+}
+@media (min-width: 900px) {
+  .app.wide .board-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 0 32px;
+    align-items: start;
+  }
+}
+.list.unranked .row.me {
+  font-weight: 800;
+}
+
+/* TV mode: no controls, scores readable across a room. */
+@media (min-width: 700px) {
+  .liveview.tv .split {
+    grid-template-columns: 1.4fr 1fr;
+  }
+}
+.liveview.tv .mini-games {
+  font-size: clamp(4rem, 8vw, 7rem);
+}
+.liveview.tv .mini-name,
+.liveview.tv .standings .who b {
+  font-size: clamp(1.1rem, 1.6vw, 1.6rem);
+}
+.liveview.tv .hide-phone {
+  display: block;
+}
+.tv-exit {
+  align-self: flex-end;
+  font-size: 0.85rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .btn:active:not(:disabled),
+  .seg button:active,
+  .pick:active,
+  .pair-cell:active,
+  .tabs a:active {
+    transform: none;
   }
 }
 .standings li.me .muted,
 .standings li.first .muted {
   color: inherit;
   opacity: 0.75;
+}
+
+/* Focus on the green header: ball yellow, since the ink ring would vanish on green. */
+.masthead :focus-visible {
+  outline-color: var(--ball);
 }

@@ -113,7 +113,7 @@ function HostSummaryBody({ ctx }: { ctx: SessionCtx }) {
   return <SummaryView s={s} device={ctx.device} />;
 }
 
-/** /h/:id#key — adds host rights to this phone, then opens the courts board. */
+/** /h/:id#key: adds host rights to this phone, then opens the courts board. */
 export function HostLink() {
   const { id = '' } = useParams();
   const t = useT();

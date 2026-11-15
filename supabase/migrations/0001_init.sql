@@ -62,7 +62,7 @@ create policy events_read on public.session_events for select to authenticated u
 create policy locks_read on public.court_locks for select to authenticated using (public.is_member(session_id));
 -- No insert/update/delete policies: writes only happen inside the functions below.
 
-/* ---------- helpers ---------- */
+-- Helpers
 
 create or replace function public._me() returns uuid
 language plpgsql stable as $$
@@ -113,7 +113,7 @@ create or replace function public._slug() returns text language sql volatile set
   select translate(encode(gen_random_bytes(9), 'base64'), '+/=', '-_');
 $$;
 
-/* ---------- session lifecycle ---------- */
+-- Session lifecycle
 
 create or replace function public.create_session(p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
@@ -197,7 +197,7 @@ begin
   perform _emit(p_session, 'claim', jsonb_build_object('playerId', p_player_id, 'deviceId', v_me), v_me);
 end $$;
 
-/* ---------- all other events ---------- */
+-- All other events
 
 create or replace function public.append_event(p_session uuid, p_type text, p_payload jsonb) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
@@ -255,7 +255,7 @@ begin
   return _emit(p_session, p_type, p_payload, v_me);
 end $$;
 
-/* ---------- court locks: one scoring phone per court ---------- */
+-- Court locks: one scoring phone per court
 
 create or replace function public.acquire_lock(p_session uuid, p_court int, p_match_id text, p_force boolean default false)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
@@ -290,7 +290,7 @@ language sql security definer set search_path = public, extensions as $$
   delete from court_locks where session_id = p_session and court = p_court and device_id = auth.uid();
 $$;
 
-/* ---------- scheduled jobs ---------- */
+-- Scheduled jobs
 
 -- Closes live sessions after 3 hours with no activity, so every session ends with a summary.
 create or replace function public.auto_close_sessions() returns int
@@ -306,7 +306,7 @@ begin
   return v_count;
 end $$;
 
-/* ---------- grants ---------- */
+-- Grants
 
 revoke all on function public._emit(uuid, text, jsonb, uuid) from public;
 revoke all on function public.auto_close_sessions() from public;
@@ -316,7 +316,7 @@ grant execute on function public.create_session(jsonb), public.claim_host(uuid, 
   public.acquire_lock(uuid, int, text, boolean), public.heartbeat_lock(uuid, int), public.release_lock(uuid, int)
   to authenticated;
 
-/* ---------- realtime and cron (skipped where the platform lacks them) ---------- */
+-- Realtime and cron (skipped where the platform lacks them)
 
 do $$
 begin

@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { myPlayer, standings, unitForPlayer, unitName, type SessionState } from '../core/session';
 import { useT } from '../i18n';
 import { Btn } from '../ui/kit';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
-import { downloadCanvas, drawSticker } from '../ui/sticker';
+import { downloadCanvas, drawSticker, STICKER_FONT } from '../ui/sticker';
 
 /** Closed-session summary. Players get their own sticker; everyone else gets the winner's. */
 export function SummaryView({ s, device }: { s: SessionState; device: string | null }) {
@@ -17,9 +17,13 @@ export function SummaryView({ s, device }: { s: SessionState; device: string | n
   const date = new Date(s.createdAt ?? Date.now()).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const gd = (n: number) => (n > 0 ? `+${n}` : String(n));
 
-  const canvas = useMemo(() => {
-    if (!row || typeof document === 'undefined') return null;
-    return drawSticker({
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  const stickerKey = row ? `${row.unit}|${row.wins}|${row.losses}|${row.gamesWon}|${rank}|${t('sticker_winner')}|${t('record')}|${s.settings.name}` : '';
+  useEffect(() => {
+    if (!row) return;
+    let alive = true;
+    // Canvas only uses fonts that are already loaded, so wait for the display face first.
+    const draw = () => alive && setCanvas(drawSticker({
       session: s.settings.name,
       date,
       label: rank === 1 ? t('sticker_winner') : t('sticker_place', { n: rank, total: table.length }),
@@ -29,8 +33,12 @@ export function SummaryView({ s, device }: { s: SessionState; device: string | n
         [String(row.gamesWon), t('games_won')],
         [gd(row.gameDiff), t('game_diff')],
       ],
-    });
-  }, [row, rank, s, date, t, table.length]);
+    }));
+    Promise.all([document.fonts.load(`900 64px ${STICKER_FONT}`), document.fonts.load(`700 40px ${STICKER_FONT}`)]).then(draw, draw);
+    return () => {
+      alive = false;
+    };
+  }, [stickerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
