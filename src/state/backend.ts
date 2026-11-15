@@ -21,6 +21,9 @@ export interface SessionFeed {
   error: string | null;
 }
 
+/** Anonymous product counters for the PRD's success metrics. No device or person is stored with them. */
+export type MetricName = 'app_installed' | 'sticker_downloaded' | 'public_link_copied' | 'host_link_copied' | 'session_repeated' | 'link_pasted';
+
 /**
  * Everything the screens need from a backend. Two implementations:
  * LocalBackend (this browser only, for demos) and SupabaseBackend (real multi-phone sessions).
@@ -40,6 +43,8 @@ export interface Backend {
   releaseLock(sessionId: string, court: number): Promise<void>;
   /** Calls back with the full event log and locks whenever either changes. */
   subscribe(sessionId: string, cb: (feed: SessionFeed) => void): () => void;
+  /** Fire and forget: a failed count never interrupts the user. */
+  track(name: MetricName, sessionId?: string | null): void;
 }
 
 export class BackendError extends Error {

@@ -6,7 +6,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { CourtLock, EventBody, SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
-import { BackendError, type Backend, type Created, type LockResult, type SessionFeed } from './backend';
+import { captchaToken as getCaptchaToken } from './turnstile';
+import { BackendError, type Backend, type Created, type LockResult, type MetricName, type SessionFeed } from './backend';
 
 interface EventRow {
   id: number;
@@ -42,7 +43,11 @@ export class SupabaseBackend implements Backend {
   private queueListeners = new Set<() => void>();
   private flushing = false;
 
-  constructor(url: string, key: string) {
+  constructor(
+    url: string,
+    key: string,
+    private captchaKey?: string,
+  ) {
     this.client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => void this.flushAll());
@@ -54,10 +59,17 @@ export class SupabaseBackend implements Backend {
     this.me ??= (async () => {
       const { data } = await this.client.auth.getSession();
       if (data.session) return data.session.user.id;
-      const { data: signed, error } = await this.client.auth.signInAnonymously();
+      let token: string | undefined;
+      try {
+        token = this.captchaKey ? await getCaptchaToken(this.captchaKey) : undefined;
+      } catch {
+        this.me = null; // let the next attempt retry the challenge
+        throw new BackendError('captcha_failed');
+      }
+      const { data: signed, error } = await this.client.auth.signInAnonymously(token ? { options: { captchaToken: token } } : undefined);
       if (error || !signed.user) {
         this.me = null;
-        throw new BackendError(error?.message.includes('Anonymous') ? 'anonymous_auth_disabled' : 'sign_in_failed');
+        throw new BackendError(error?.message.includes('Anonymous') ? 'anonymous_auth_disabled' : /captcha/i.test(error?.message ?? '') ? 'captcha_failed' : 'sign_in_failed');
       }
       return signed.user.id;
     })();
@@ -155,6 +167,12 @@ export class SupabaseBackend implements Backend {
     } finally {
       this.flushing = false;
     }
+  }
+
+  track(name: MetricName, sessionId?: string | null) {
+    void this.deviceId()
+      .then(() => this.client.rpc('track_event', { p_name: name, p_session: sessionId ?? null }))
+      .catch(() => undefined);
   }
 
   // Locks

@@ -160,6 +160,10 @@ export class LocalBackend implements Backend {
     save(all);
   }
 
+  track() {
+    // Demo mode keeps no metrics.
+  }
+
   subscribe(sessionId: string, cb: (feed: SessionFeed) => void) {
     const push = () => {
       const s = load()[sessionId];

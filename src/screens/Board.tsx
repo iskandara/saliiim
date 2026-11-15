@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { allMatchesFinished, sideName, type MatchState } from '../core/session';
 import { useT } from '../i18n';
-import { hostKeyFor } from '../state';
+import { backend, hostKeyFor } from '../state';
 import { errorCode, type SessionCtx } from '../state/useSession';
 import { absUrl, Btn, copyText, Icon, inAppBrowser, Sheet, useToast } from '../ui/kit';
 import { CourtsList, EnterScoreSheet, LiveBadge, NextUp, Notices, ProgressLine } from '../ui/session-ui';
@@ -98,7 +98,10 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
               small
               icon="link"
               onClick={async () => {
-                if (await copyText(hostLink)) toast(t('copied'));
+                if (await copyText(hostLink)) {
+                  toast(t('copied'));
+                  backend.track('host_link_copied', id);
+                }
                 hideLink();
               }}
             >
@@ -182,7 +185,10 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
               <Btn
                 icon="link"
                 onClick={async () => {
-                  if (await copyText(absUrl(`/p/${s.slug}`))) toast(t('copied'));
+                  if (await copyText(absUrl(`/p/${s.slug}`))) {
+                    toast(t('copied'));
+                    backend.track('public_link_copied', id);
+                  }
                 }}
               >
                 {t('copy_public')}

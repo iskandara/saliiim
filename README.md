@@ -66,6 +66,39 @@ Vercel also works (`vercel.json` is included): import the repo and deploy. Its f
 
 The publishable key is safe in the browser: all writes go through Postgres functions that check the caller's role, and row-level security limits reads to people who opened the session's link.
 
+## Launch checklist
+
+### Database migrations
+
+Run each file in `supabase/migrations/` once, in order, in the Supabase SQL Editor: `0001_init.sql`, `0002_record_result.sql`, `0003_metrics.sql`.
+
+### Spam protection (Cloudflare Turnstile, free)
+
+Anyone with the link can create an anonymous user, so turn on a CAPTCHA before sharing widely. People rarely see a challenge; Cloudflare only asks when something looks automated.
+
+1. **Cloudflare dashboard → Turnstile → Add widget.** Hostname: your site (for example `saliiim.<you>.workers.dev`). Mode: **Managed**. Copy the **site key** and **secret key**.
+2. **Put the site key in the app.** Add `VITE_TURNSTILE_SITE_KEY=<site key>` to `.env.production`, then commit and push. The site key is public by design.
+3. **After that deploy is live:** Supabase → **Authentication → Attack Protection → Enable CAPTCHA protection**, provider **Turnstile**, paste the **secret key**, Save.
+
+Do step 3 last. Once Supabase requires a CAPTCHA, phones without the site key in the app can't sign in.
+
+### Metrics
+
+No tracking scripts. The PRD's success metrics are computed from the session log, plus a few anonymous counters (sticker downloads, link copies, installs) with no device, name or IP stored. In the SQL Editor:
+
+```sql
+select * from analytics.prd_metrics;   -- the PRD targets, last 8 weeks
+select * from analytics.weekly;        -- sessions, hosts, close rate, players, by week
+```
+
+### Installable app
+
+The site ships a web app manifest, the 8-bit icon set and a service worker, so phones can **Add to Home Screen** and the app opens even on a weak signal. Rebuild the icons with `python3 scripts/make-icons.py` (needs Pillow).
+
+### Custom domain (optional)
+
+Cloudflare → **Workers & Pages → saliiim → Settings → Domains & Routes → Add → Custom domain**. Then add the new hostname to the Turnstile widget.
+
 ## Project layout
 
 ```

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { myPlayer, standings, unitForPlayer, unitName, type SessionState } from '../core/session';
 import { useT } from '../i18n';
+import { backend } from '../state';
 import { Ball, Btn } from '../ui/kit';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
 import { downloadCanvas, drawSticker, STICKER_FONT } from '../ui/sticker';
 
 /** Closed-session summary. Players get their own sticker; everyone else gets the winner's. */
-export function SummaryView({ s, device }: { s: SessionState; device: string | null }) {
+export function SummaryView({ s, device, sessionId }: { s: SessionState; device: string | null; sessionId: string | null }) {
   const t = useT();
   const table = standings(s);
   const me = myPlayer(s, device);
@@ -85,7 +86,10 @@ export function SummaryView({ s, device }: { s: SessionState; device: string | n
             <img src={canvas.toDataURL('image/png')} alt={`${unitName(s, row!.unit)} sticker`} />
           </div>
           <p className="small">{t('sticker_caption')}</p>
-          <Btn kind="primary" icon="download" onClick={() => downloadCanvas(canvas, `saliiim-${s.slug || 'session'}.png`)}>
+          <Btn kind="primary" icon="download" onClick={() => {
+              downloadCanvas(canvas, `saliiim-${s.slug || 'session'}.png`);
+              backend.track('sticker_downloaded', sessionId);
+            }}>
             {t('download')}
           </Btn>
         </section>

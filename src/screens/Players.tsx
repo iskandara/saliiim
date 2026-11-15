@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { estimateMinutes, usableCourts } from '../core/scheduler';
 import { activePlayers, previewMatchCount, startProblem, type SessionState } from '../core/session';
 import { useT } from '../i18n';
-import { saveRoster } from '../state';
+import { backend, saveRoster } from '../state';
 import { newId } from '../state/backend';
 import { errorCode, type SessionCtx } from '../state/useSession';
 import { absUrl, Btn, copyText, Icon, Sheet, useToast } from '../ui/kit';
@@ -116,7 +116,10 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
         kind="primary"
         icon="link"
         onClick={async () => {
-          if (await copyText(absUrl(`/p/${s.slug}`))) toast(t('copied'));
+          if (await copyText(absUrl(`/p/${s.slug}`))) {
+            toast(t('copied'));
+            backend.track('public_link_copied', sessionId);
+          }
         }}
       >
         {t('copy_public')}

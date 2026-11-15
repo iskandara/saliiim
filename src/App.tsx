@@ -79,7 +79,7 @@ export function App() {
   return (
     <PrefsProvider>
       <ToastProvider>
-        <RouterProvider router={router} future={{ v7_startTransition: true }} />
+        <RouterProvider router={router} />
       </ToastProvider>
     </PrefsProvider>
   );

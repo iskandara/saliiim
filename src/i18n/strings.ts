@@ -1,6 +1,12 @@
 /** All copy, keyed. Tennis terms stay English in both languages. Use {name} placeholders, never concatenation. */
 export const en = {
   tagline: 'You tap the points. We do the rest.',
+  captcha_failed: "We couldn't check you're a real person. Check your connection and try again.",
+  install_title: 'Keep Saliiim on your home screen',
+  install_body: 'Opens like an app, full screen, and still loads on a weak signal at the courts.',
+  install_btn: 'Install',
+  install_ios: 'On iPhone: tap Share, then "Add to Home Screen".',
+  not_now: 'Not now',
   enter_score: 'Enter score',
   enter_final: 'Enter final score',
   enter_title: 'Final score',
@@ -325,6 +331,12 @@ export type Key = keyof typeof en;
 
 export const jksl: Record<Key, string> = {
   tagline: 'Lo tap poinnya, sisanya kita urus.',
+  captcha_failed: 'Verifikasi manusia gagal. Cek koneksi lo, terus coba lagi.',
+  install_title: 'Simpen Saliiim di home screen',
+  install_body: 'Kebuka kayak app, full screen, dan tetap jalan walau sinyal di lapangan lemah.',
+  install_btn: 'Install',
+  install_ios: 'Di iPhone: tap Share, terus "Add to Home Screen".',
+  not_now: 'Nanti aja',
   enter_score: 'Input skor',
   enter_final: 'Input skor akhir',
   enter_title: 'Skor akhir',

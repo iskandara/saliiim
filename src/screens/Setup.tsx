@@ -57,13 +57,15 @@ export function Setup() {
       localStorage.setItem(LAST, JSON.stringify(settings));
       remember({ id: created.id, slug: created.slug, name: settings.name, role: 'host', hostKey: created.hostKey, at: new Date().toISOString() });
       if (repeat) {
+        backend.track('session_repeated', created.id);
         for (const name of lastRoster().filter((n) => n !== settings.hostName)) {
           await backend.append(created.id, { type: 'add_player', payload: { id: newId(), name, via: 'manual' } });
         }
       }
       nav(`/s/${created.id}/players`);
     } catch (e) {
-      toast(t(errorCode(e) === 'anonymous_auth_disabled' ? 'anonymous_auth_disabled' : 'error', { code: errorCode(e) }));
+      const code = errorCode(e);
+      toast(code === 'anonymous_auth_disabled' || code === 'captcha_failed' ? t(code) : t('error', { code }));
       setBusy(false);
     }
   };

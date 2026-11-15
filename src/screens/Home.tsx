@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
-import { readHistory } from '../state';
+import { backend, readHistory } from '../state';
+import { useInstall } from '../state/install';
 import { Ball, Btn, Field, Icon, Page } from '../ui/kit';
 
 /** Accepts a full link or a bare slug and returns the public slug, or null. */
@@ -19,6 +20,7 @@ export function Home() {
   const lastHosted = history.find((h) => h.role === 'host');
   const [link, setLink] = useState('');
   const [linkErr, setLinkErr] = useState<string | null>(null);
+  const installer = useInstall();
 
   return (
     <Page header="full">
@@ -36,12 +38,39 @@ export function Home() {
         </div>
       </section>
 
+      {installer.mode && (
+        <section className="panel install">
+          <div className="install-head">
+            <img src="/icon-192.png" alt="" width="48" height="48" />
+            <div>
+              <h3>{t('install_title')}</h3>
+              <p className="small muted">{installer.mode === 'ios' ? t('install_ios') : t('install_body')}</p>
+            </div>
+          </div>
+          <div className="btn-row">
+            {installer.mode === 'prompt' && (
+              <Btn
+                kind="dark"
+                icon="download"
+                onClick={async () => {
+                  if (await installer.install()) backend.track('app_installed');
+                }}
+              >
+                {t('install_btn')}
+              </Btn>
+            )}
+            <Btn onClick={installer.dismiss}>{t('not_now')}</Btn>
+          </div>
+        </section>
+      )}
+
       <form
         className="panel"
         onSubmit={(e) => {
           e.preventDefault();
           const slug = slugFrom(link);
           if (!slug) return setLinkErr(t('bad_link'));
+          backend.track('link_pasted');
           nav(`/p/${slug}`);
         }}
       >

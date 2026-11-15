@@ -34,7 +34,7 @@ function PublicGate({ children, wide, header }: { children: (ctx: SessionCtx, sl
   const { slug = '' } = useParams();
   const { ctx, err } = usePublic(slug);
   const t = useT();
-  if (err === 'anonymous_auth_disabled') return <Page><p className="box warn">{t('anonymous_auth_disabled')}</p></Page>;
+  if (err === 'anonymous_auth_disabled' || err === 'captcha_failed') return <Page><p className="box warn">{t(err)}</p></Page>;
   if (err === 'not_found' || (ctx.ready && ctx.state.status === 'empty' && (!ctx.error || ctx.error === 'not_found'))) {
     return (
       <Page>
@@ -92,7 +92,7 @@ function PublicHomeBody({ ctx, slug }: { ctx: SessionCtx; slug: string }) {
     if (me && ctx.sessionId) remember({ id: ctx.sessionId, slug, name: s.settings.name, role: 'player', at: s.createdAt ?? new Date().toISOString() });
   }, [me?.id, ctx.sessionId, slug, s.settings.name, s.createdAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (s.status === 'closed') return <SummaryView s={s} device={ctx.device} />;
+  if (s.status === 'closed') return <SummaryView s={s} device={ctx.device} sessionId={ctx.sessionId} />;
   if (me) return <MeView ctx={ctx} slug={slug} />;
   if (watching) return <LiveView s={s} slug={slug} ownCard />;
   return (

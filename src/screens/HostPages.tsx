@@ -110,7 +110,7 @@ function HostSummaryBody({ ctx }: { ctx: SessionCtx }) {
       </>
     );
   }
-  return <SummaryView s={s} device={ctx.device} />;
+  return <SummaryView s={s} device={ctx.device} sessionId={ctx.sessionId} />;
 }
 
 /** /h/:id#key: adds host rights to this phone, then opens the courts board. */

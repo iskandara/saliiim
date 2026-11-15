@@ -1585,3 +1585,28 @@ section > h3 {
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
+
+/* Install card: the 8-bit app icon next to the pitch. */
+.install-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.install-head img {
+  image-rendering: pixelated;
+  border-radius: 12px;
+  flex: none;
+}
+.install-head h3 {
+  margin: 0 0 2px;
+  line-height: 1.2;
+}
+
+/* Turnstile challenge, only when Cloudflare asks for one on a phone's first sign-in. */
+.captcha-box {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  z-index: 40;
+}

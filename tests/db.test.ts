@@ -42,6 +42,7 @@ beforeAll(async () => {
   `);
   await db.exec(readFileSync('supabase/migrations/0001_init.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0002_record_result.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0003_metrics.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -94,10 +95,24 @@ describe('supabase migration', () => {
     expect(locks!.n).toBe(0);
   });
 
+  it('metrics: only known counters, no personal data, and the PRD views compute', async () => {
+    await as(SARI, `select public.track_event('sticker_downloaded', $1)`, [sessionId]);
+    await as(STRANGER, `select public.track_event('link_pasted')`);
+    await fails(SARI, `select public.track_event('anything_else')`, [], 'unknown_metric');
+    const cols = await as<{ column_name: string }>(HOST, `select column_name from information_schema.columns where table_name = 'usage_events' order by ordinal_position`);
+    expect(cols.map((c) => c.column_name)).toEqual(['id', 'name', 'session_id', 'created_at']);
+    const [m] = await as<Record<string, unknown>>(HOST, `select * from analytics.prd_metrics`);
+    expect(m).toHaveProperty('pct_sessions_closed');
+    const [w] = await as<{ sessions: number; players: number }>(HOST, `select sessions::int, players::int from analytics.weekly`);
+    expect(w).toMatchObject({ sessions: 1, players: 3 });
+  });
+
   it('only members can read the session (row level security)', async () => {
     await as(STRANGER, `set role authenticated`);
     const none = await as(STRANGER, `select count(*)::int as n from public.session_events where session_id = $1`, [sessionId]);
     expect(none[0]).toEqual({ n: 0 });
+    const counters = await as(STRANGER, `select count(*)::int as n from public.usage_events`);
+    expect(counters[0]).toEqual({ n: 0 });
     const some = await as<{ n: number }>(SARI, `select count(*)::int as n from public.session_events where session_id = $1`, [sessionId]);
     expect(some[0]!.n).toBeGreaterThan(5);
     await db.exec(`reset role`);

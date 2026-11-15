@@ -7,7 +7,10 @@ const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
 /** Supabase when configured, otherwise the in-browser demo backend. */
-export const backend: Backend = url && key ? new SupabaseBackend(url, key) : new LocalBackend();
+// Optional Cloudflare Turnstile site key: set it once CAPTCHA protection is on in Supabase.
+const captcha = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || undefined;
+
+export const backend: Backend = url && key ? new SupabaseBackend(url, key, captcha) : new LocalBackend();
 
 /** Sessions this phone created or joined, for the Home screen. Stored on the device only. */
 export interface HistoryItem {
