@@ -2,6 +2,7 @@
 export const en = {
   tagline: 'You tap the points. We do the rest.',
   captcha_failed: "We couldn't check you're a real person. Check your connection and try again.",
+  captcha_code: 'Code: {code}',
   install_title: 'Keep Saliiim on your home screen',
   install_body: 'Opens like an app, full screen, and still loads on a weak signal at the courts.',
   install_btn: 'Install',
@@ -332,6 +333,7 @@ export type Key = keyof typeof en;
 export const jksl: Record<Key, string> = {
   tagline: 'Lo tap poinnya, sisanya kita urus.',
   captcha_failed: 'Verifikasi manusia gagal. Cek koneksi lo, terus coba lagi.',
+  captcha_code: 'Kode: {code}',
   install_title: 'Simpen Saliiim di home screen',
   install_body: 'Kebuka kayak app, full screen, dan tetap jalan walau sinyal di lapangan lemah.',
   install_btn: 'Install',

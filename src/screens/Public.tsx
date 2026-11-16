@@ -34,7 +34,20 @@ function PublicGate({ children, wide, header }: { children: (ctx: SessionCtx, sl
   const { slug = '' } = useParams();
   const { ctx, err } = usePublic(slug);
   const t = useT();
-  if (err === 'anonymous_auth_disabled' || err === 'captcha_failed') return <Page><p className="box warn">{t(err)}</p></Page>;
+  if (err === 'anonymous_auth_disabled') return <Page><p className="box warn">{t(err)}</p></Page>;
+  if (err?.startsWith('captcha_failed')) {
+    return (
+      <Page>
+        <div className="box warn" role="alert">
+          <p>{t('captcha_failed')}</p>
+          <p className="small">{t('captcha_code', { code: err.split(':').slice(1).join(':') })}</p>
+          <Btn icon="undo" onClick={() => window.location.reload()}>
+            {t('retry')}
+          </Btn>
+        </div>
+      </Page>
+    );
+  }
   if (err === 'not_found' || (ctx.ready && ctx.state.status === 'empty' && (!ctx.error || ctx.error === 'not_found'))) {
     return (
       <Page>

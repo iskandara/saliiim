@@ -65,7 +65,8 @@ export function Setup() {
       nav(`/s/${created.id}/players`);
     } catch (e) {
       const code = errorCode(e);
-      toast(code === 'anonymous_auth_disabled' || code === 'captcha_failed' ? t(code) : t('error', { code }));
+      if (code.startsWith('captcha_failed')) toast(`${t('captcha_failed')} ${t('captcha_code', { code: code.split(':').slice(1).join(':') })}`);
+      else toast(code === 'anonymous_auth_disabled' ? t(code) : t('error', { code }));
       setBusy(false);
     }
   };

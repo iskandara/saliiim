@@ -62,15 +62,22 @@ export class SupabaseBackend implements Backend {
       // If the challenge can't run (blocked script, no signal), still try without a token:
       // Supabase decides whether a token is required, so this never weakens the protection.
       let token: string | undefined;
+      let captchaIssue: string | undefined;
       try {
         token = this.captchaKey ? await getCaptchaToken(this.captchaKey) : undefined;
-      } catch {
+      } catch (e) {
         token = undefined;
+        captchaIssue = (e as Error).message;
       }
       const { data: signed, error } = await this.client.auth.signInAnonymously(token ? { options: { captchaToken: token } } : undefined);
       if (error || !signed.user) {
         this.me = null;
-        throw new BackendError(error?.message.includes('Anonymous') ? 'anonymous_auth_disabled' : /captcha/i.test(error?.message ?? '') ? 'captcha_failed' : 'sign_in_failed');
+        if (/captcha/i.test(error?.message ?? '')) {
+          // Show the reason on screen, so it can be fixed without a debugger: Turnstile's code if the
+          // challenge failed on this phone, otherwise Supabase's own words.
+          throw new BackendError(`captcha_failed:${captchaIssue ?? error!.message.slice(0, 80)}`);
+        }
+        throw new BackendError(error?.message.includes('Anonymous') ? 'anonymous_auth_disabled' : 'sign_in_failed');
       }
       return signed.user.id;
     })();

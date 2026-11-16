@@ -19,7 +19,7 @@ function load(): Promise<TurnstileApi> {
     el.onload = () => resolve((window as unknown as { turnstile: TurnstileApi }).turnstile);
     el.onerror = () => {
       loading = null;
-      reject(new Error('captcha_unavailable'));
+      reject(new Error('turnstile_script_blocked'));
     };
     document.head.appendChild(el);
   });
@@ -40,7 +40,7 @@ export async function captchaToken(siteKey: string): Promise<string> {
     };
     const timer = setTimeout(() => {
       done();
-      reject(new Error('captcha_timeout'));
+      reject(new Error('turnstile_timeout'));
     }, 60_000);
     id = api.render(box, {
       sitekey: siteKey,
@@ -49,9 +49,11 @@ export async function captchaToken(siteKey: string): Promise<string> {
         done();
         resolve(token);
       },
-      'error-callback': () => {
+      // Turnstile passes its own error code (for example 110200: this domain is not on the widget).
+      'error-callback': (code: string) => {
         done();
-        reject(new Error('captcha_failed'));
+        reject(new Error(`turnstile_${code}`));
+        return true;
       },
     });
   });
