@@ -4,7 +4,7 @@ import { useT } from '../i18n';
 import { backend } from '../state';
 import { Ball, Btn } from '../ui/kit';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
-import { downloadCanvas, drawSticker, STICKER_FONT } from '../ui/sticker';
+import { downloadCanvas, drawSticker, loadLogo, STICKER_FONT } from '../ui/sticker';
 
 /** Closed-session summary. Players get their own sticker; everyone else gets the winner's. */
 export function SummaryView({ s, device, sessionId }: { s: SessionState; device: string | null; sessionId: string | null }) {
@@ -24,7 +24,9 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
     if (!row) return;
     let alive = true;
     // Canvas only uses fonts that are already loaded, so wait for the display face first.
+    let logo: HTMLImageElement | null = null;
     const draw = () => alive && setCanvas(drawSticker({
+      logo,
       session: s.settings.name,
       date,
       label: rank === 1 ? t('sticker_winner') : t('sticker_place', { n: rank, total: table.length }),
@@ -35,7 +37,13 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
         [gd(row.gameDiff), t('game_diff')],
       ],
     }));
-    Promise.all([document.fonts.load(`900 64px ${STICKER_FONT}`), document.fonts.load(`700 40px ${STICKER_FONT}`)]).then(draw, draw);
+    Promise.all([
+      loadLogo().then((img) => {
+        logo = img;
+      }),
+      document.fonts.load(`900 64px ${STICKER_FONT}`),
+      document.fonts.load(`700 40px ${STICKER_FONT}`),
+    ]).then(draw, draw);
     return () => {
       alive = false;
     };

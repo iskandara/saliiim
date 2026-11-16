@@ -4,6 +4,17 @@ export interface StickerData {
   label: string;
   name: string;
   stats: [string, string][];
+  /** The cream header logo; the typed wordmark is the fallback if it failed to load. */
+  logo?: HTMLImageElement | null;
+}
+
+export function loadLogo(): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = '/brand/logo-reverse-720.png';
+  });
 }
 
 export const STICKER_FONT = "'Archivo Variable'";
@@ -38,15 +49,20 @@ export function drawSticker(d: StickerData): HTMLCanvasElement {
   g.lineTo(800, 788);
   g.stroke();
 
-  // Wordmark in the frame, like the app header.
+  // Logo in the frame, like the app header.
   g.textBaseline = 'alphabetic';
   g.textAlign = 'left';
-  g.font = font(800, 48);
-  g.fillStyle = '#ffffff';
-  g.fillText('Saliiim', 92, 100);
-  const w = g.measureText('Saliiim').width;
-  g.fillStyle = ball;
-  g.fillText('!', 92 + w + 2, 100);
+  if (d.logo) {
+    const h = 66;
+    g.drawImage(d.logo, 84, 46, (d.logo.naturalWidth / d.logo.naturalHeight) * h, h);
+  } else {
+    g.font = font(800, 48);
+    g.fillStyle = '#ffffff';
+    g.fillText('Saliiim', 92, 100);
+    const w = g.measureText('Saliiim').width;
+    g.fillStyle = ball;
+    g.fillText('!', 92 + w + 2, 100);
+  }
 
   // Result, centred on the court.
   g.textAlign = 'center';

@@ -23,7 +23,9 @@ Dial: ENERGY 3 / RHYTHM 2 / MOTION 2
 
 ## Frame and backdrop
 
-- The header is the green frame (#0b5534), with the "Saliiim!" wordmark in white and a lime "!".
+- The header is the green frame (#0b5534) with the Saliiim logo (supplied by the owner on 2026-11-16): italic script with a court line, a flying ball and two sparks.
+- Logo files live in `public/brand/` and are built from `design/saliiim-logo-source.webp` by `scripts/make-logo.py`. The original green version is for light surfaces. The header version has cream letters, the court line cut out so the green shows through, and the lime ball, swoosh and sparks unchanged.
+- The app icon stays the 8-bit ball on clay. A logo this wide does not read at 16px.
 - From 760px wide, the app sits in a rounded green frame on clay tiles, with two muted green balls in the corners, as in the reference. The balls are muted on purpose so they never compete with lime buttons.
 - On phones the backdrop is off and the screen belongs to the app.
 

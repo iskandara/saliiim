@@ -1,8 +1,8 @@
 // Offline shell for courts with patchy signal.
 // Pages: network first, so a new deploy shows up at once; the cached copy is only for offline.
 // Hashed build files and icons: cache first, since their names change whenever they change.
-const CACHE = 'saliiim-v1';
-const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png'];
+const CACHE = 'saliiim-v2';
+const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/brand/logo-reverse-360.webp'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/') || /\.(png|svg|ico|woff2?)$/.test(url.pathname)) {
+  if (url.pathname.startsWith('/assets/') || /\.(png|svg|ico|webp|woff2?)$/.test(url.pathname)) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

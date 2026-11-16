@@ -108,7 +108,8 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <Link to="/" className="wordmark" aria-label={t('home_link')}>
-        Saliiim<span>!</span>
+        {/* Cream letters for the green header; the court line through them is cut out. */}
+        <img src="/brand/logo-reverse-360.webp" srcSet="/brand/logo-reverse-360.webp 360w, /brand/logo-reverse-720.webp 720w" sizes="152px" width="151" height="52" alt="Saliiim!" />
       </Link>
       <div className="prefs">
         <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')} title={t('theme')}>
