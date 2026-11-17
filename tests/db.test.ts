@@ -43,6 +43,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/0001_init.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0002_record_result.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0003_metrics.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0004_open_host_postpone.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -134,6 +135,21 @@ describe('supabase migration', () => {
     await fails(OTHER_PHONE, `select public.claim_host($1, 'wrong')`, [sessionId], 'bad_host_key');
     await as(OTHER_PHONE, `select public.claim_host($1, $2)`, [sessionId, hostKey]);
     await as(OTHER_PHONE, `select public.append_event($1, 'skip_match', '{"matchId":"m2"}')`, [sessionId]);
+  });
+
+  it('after the host steps off, players run the session and can postpone a match', async () => {
+    await fails(SARI, `select public.append_event($1, 'close', '{}')`, [sessionId], 'host_only');
+    await as(HOST, `select public.append_event($1, 'step_off', '{"live":"skip"}')`, [sessionId]);
+    // Sari is a co-host now: she can add a late arrival, which builds new matches.
+    await as(SARI, `select public.append_event($1, 'add_late', '{"id":"tari","name":"Tari"}')`, [sessionId]);
+    const rows = await as<{ id: number; type: string; payload: Record<string, unknown>; actor: string | null; created_at: Date }>(
+      HOST, `select id, type, payload, actor, created_at from public.session_events where session_id = $1 order by id`, [sessionId]);
+    const s = reduceSession(rows.map((r) => ({ seq: Number(r.id), type: r.type, payload: r.payload, actor: r.actor, at: r.created_at.toISOString() }) as SessionEvent));
+    expect(s.ignored).toEqual([]);
+    const target = s.matches.find((m) => m.status === 'live' || m.status === 'queued')!;
+    await as(SARI, `select public.append_event($1, 'postpone_match', $2)`, [sessionId, JSON.stringify({ matchId: target.id })]);
+    await fails(SARI, `select public.append_event($1, 'promote', '{"playerId":"bayu"}')`, [sessionId], 'host_only');
+    await fails(STRANGER, `select public.append_event($1, 'postpone_match', '{}')`, [sessionId], 'not_member');
   });
 
   it('auto-close ends idle sessions and locks them', async () => {

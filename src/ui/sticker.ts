@@ -1,99 +1,170 @@
+export type StickerTheme = 'court' | 'clay' | 'grass' | 'night' | 'clear_light' | 'clear_dark';
+
+export const STICKER_THEMES: StickerTheme[] = ['court', 'clay', 'grass', 'night', 'clear_light', 'clear_dark'];
+
+interface Theme {
+  /** Card colours; the clear themes have no card, only type over the photo. */
+  frame?: string;
+  surface?: string;
+  lines?: string;
+  ink: string;
+  accent: string;
+  logo: 'reverse' | 'green';
+  /** Soft shadow under the type so white text reads on a busy photo. */
+  shadow?: string;
+}
+
+const THEMES: Record<StickerTheme, Theme> = {
+  court: { frame: '#0b5534', surface: '#4357cc', lines: 'rgba(255,255,255,0.5)', ink: '#ffffff', accent: '#d7f13b', logo: 'reverse' },
+  clay: { frame: '#7a2d1b', surface: '#b8552f', lines: 'rgba(255,255,255,0.55)', ink: '#ffffff', accent: '#d7f13b', logo: 'reverse' },
+  grass: { frame: '#0b5534', surface: '#3d7f3a', lines: 'rgba(255,255,255,0.55)', ink: '#ffffff', accent: '#d7f13b', logo: 'reverse' },
+  night: { frame: '#0b5534', surface: '#0d1511', lines: 'rgba(215,241,59,0.35)', ink: '#ffffff', accent: '#d7f13b', logo: 'reverse' },
+  clear_light: { ink: '#ffffff', accent: '#d7f13b', logo: 'reverse', shadow: 'rgba(0,0,0,0.55)' },
+  clear_dark: { ink: '#11241a', accent: '#0b5534', logo: 'green' },
+};
+
+/** Swatch colour for the picker. */
+export function themeSwatch(theme: StickerTheme): string {
+  const th = THEMES[theme];
+  return th.surface ?? (theme === 'clear_light' ? '#ffffff' : '#11241a');
+}
+
+/** Whether the preview needs a dark backdrop to show the white type. */
+export const needsDarkPreview = (theme: StickerTheme) => theme === 'clear_light';
+
 export interface StickerData {
+  theme: StickerTheme;
   session: string;
   date: string;
   label: string;
   name: string;
   stats: [string, string][];
-  /** The cream header logo; the typed wordmark is the fallback if it failed to load. */
+  /** Promotional line along the bottom. */
+  promo: string;
+  /** Logo for this theme; the typed wordmark is the fallback if it failed to load. */
   logo?: HTMLImageElement | null;
 }
 
-export function loadLogo(): Promise<HTMLImageElement | null> {
+export function loadLogo(theme: StickerTheme): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
-    img.src = '/brand/logo-reverse-720.png';
+    img.src = THEMES[theme].logo === 'green' ? '/brand/logo-720.png' : '/brand/logo-reverse-720.png';
   });
 }
 
 export const STICKER_FONT = "'Archivo Variable'";
 
-/** 1000 x 880 transparent PNG for Instagram Stories: a green-framed blue court with the result. */
+export const STICKER_W = 1600;
+export const STICKER_H = 900;
+
+/**
+ * 1600 x 900 PNG to lay over a photo, like a run-tracker overlay: logo, result, three stats
+ * and a promo line. Coloured themes sit on a framed court card with see-through corners;
+ * the clear themes are type only.
+ */
 export function drawSticker(d: StickerData): HTMLCanvasElement {
+  const th = THEMES[d.theme];
   const c = document.createElement('canvas');
-  c.width = 1000;
-  c.height = 880;
+  c.width = STICKER_W;
+  c.height = STICKER_H;
   const g = c.getContext('2d')!;
-  const frame = '#0b5534';
-  const court = '#4357cc';
-  const line = 'rgba(244,245,249,0.92)';
-  const ink = '#11241a';
-  const ball = '#d7f13b';
   const font = (weight: number, size: number, italic = false) => `${italic ? 'italic ' : ''}${weight} ${size}px ${STICKER_FONT}, system-ui, sans-serif`;
+  const left = 110;
+  const right = STICKER_W - 110;
 
-  // Green frame, blue court, white court lines.
-  g.fillStyle = frame;
-  roundRect(g, 40, 40, 920, 800, 48);
-  g.fill();
-  g.fillStyle = court;
-  roundRect(g, 64, 120, 872, 696, 28);
-  g.fill();
-  g.strokeStyle = line;
-  g.lineWidth = 7;
-  g.strokeRect(92, 148, 816, 640);
-  g.beginPath();
-  g.moveTo(200, 148);
-  g.lineTo(200, 788);
-  g.moveTo(800, 148);
-  g.lineTo(800, 788);
-  g.stroke();
+  if (th.frame && th.surface) {
+    // Frame, court surface, and court lines: the outer lines plus a service line above the footer.
+    g.fillStyle = th.frame;
+    roundRect(g, 16, 16, STICKER_W - 32, STICKER_H - 32, 56);
+    g.fill();
+    g.fillStyle = th.surface;
+    roundRect(g, 36, 36, STICKER_W - 72, STICKER_H - 72, 40);
+    g.fill();
+    g.strokeStyle = th.lines!;
+    g.lineWidth = 6;
+    g.strokeRect(68, 68, STICKER_W - 136, STICKER_H - 136);
+    g.beginPath();
+    g.moveTo(68, 720);
+    g.lineTo(STICKER_W - 68, 720);
+    g.stroke();
+  }
 
-  // Logo in the frame, like the app header.
+  const shadow = (on: boolean) => {
+    g.shadowColor = on && th.shadow ? th.shadow : 'transparent';
+    g.shadowBlur = on && th.shadow ? 14 : 0;
+    g.shadowOffsetY = on && th.shadow ? 2 : 0;
+  };
+  shadow(true);
+
+  // Logo top left, session and date top right.
   g.textBaseline = 'alphabetic';
   g.textAlign = 'left';
   if (d.logo) {
-    const h = 66;
-    g.drawImage(d.logo, 84, 46, (d.logo.naturalWidth / d.logo.naturalHeight) * h, h);
+    const h = 100;
+    g.drawImage(d.logo, left - 8, 92, (d.logo.naturalWidth / d.logo.naturalHeight) * h, h);
   } else {
-    g.font = font(800, 48);
-    g.fillStyle = '#ffffff';
-    g.fillText('Saliiim', 92, 100);
+    g.font = font(800, 64, true);
+    g.fillStyle = th.ink;
+    g.fillText('Saliiim', left, 172);
     const w = g.measureText('Saliiim').width;
-    g.fillStyle = ball;
-    g.fillText('!', 92 + w + 2, 100);
+    g.fillStyle = th.accent;
+    g.fillText('!', left + w + 2, 172);
+  }
+  g.textAlign = 'right';
+  g.fillStyle = th.ink;
+  g.font = font(700, 36);
+  g.fillText(fit(g, d.session, 820), right, 140);
+  g.font = font(600, 32);
+  g.globalAlpha = 0.85;
+  g.fillText(d.date, right, 184);
+  g.globalAlpha = 1;
+
+  // Place, then the name in the italic court voice.
+  g.textAlign = 'left';
+  g.fillStyle = th.accent;
+  g.font = font(800, 36);
+  g.fillText(fit(g, spaced(d.label.toUpperCase()), 1300), left, 292);
+  g.fillStyle = th.ink;
+  g.font = font(900, 120, true);
+  let lines = wrap(g, d.name.toUpperCase(), right - left);
+  if (lines.length > 1) {
+    g.font = font(900, 92, true);
+    lines = wrap(g, d.name.toUpperCase(), right - left).slice(0, 2);
+    lines.forEach((l, i) => g.fillText(l, left, 392 + i * 92));
+  } else {
+    g.fillText(lines[0] ?? '', left, 410);
   }
 
-  // Result, centred on the court.
-  g.textAlign = 'center';
-  g.fillStyle = '#ffffff';
-  g.font = font(800, 26);
-  g.fillText(fit(g, d.label.toUpperCase().split('').join(String.fromCharCode(8202)), 560), 500, 260);
-  g.font = font(600, 30);
-  g.fillText(fit(g, `${d.session} · ${d.date}`, 560), 500, 306);
-  g.font = font(900, 96, true);
-  const lines = wrap(g, d.name.toUpperCase(), 560).slice(0, 2);
-  lines.forEach((l, i) => g.fillText(l, 500, 420 + i * 100));
-
-  // Stat chips.
-  const top = lines.length > 1 ? 560 : 500;
+  // Stats: big numbers over small labels, the last one in the accent colour.
+  const top = lines.length > 1 ? 612 : 586;
+  const col = (right - left) / d.stats.length;
   d.stats.forEach(([value, label], i) => {
-    const x = 220 + i * 190;
-    const hl = i === d.stats.length - 1;
-    g.fillStyle = hl ? ball : '#f4f5f9';
-    roundRect(g, x, top, 170, 120, 22);
-    g.fill();
-    g.fillStyle = ink;
-    g.font = font(900, 52, true);
-    g.fillText(value, x + 85, top + 64);
-    g.font = font(700, 20);
-    g.fillText(fit(g, label, 150), x + 85, top + 98);
+    const x = left + i * col;
+    g.fillStyle = i === d.stats.length - 1 ? th.accent : th.ink;
+    g.font = font(900, 104, true);
+    g.fillText(value, x, top);
+    g.fillStyle = th.ink;
+    g.globalAlpha = 0.85;
+    g.font = font(700, 28);
+    g.fillText(fit(g, spaced(label.toUpperCase()), col - 30), x, top + 48);
+    g.globalAlpha = 1;
   });
 
-  // A row of balls along the baseline.
-  for (let i = 0; i < 9; i++) drawBall(g, 250 + i * 62, 752, 20, ball);
+  // Footer: the promo line, and a row of balls on the right.
+  shadow(false);
+  drawBall(g, left + 14, 788, 16, '#d7f13b');
+  shadow(true);
+  g.fillStyle = th.ink;
+  g.font = font(800, 36);
+  g.fillText(fit(g, d.promo, 980), left + 46, 801);
+  shadow(false);
+  for (let i = 0; i < 5; i++) drawBall(g, right - 14 - i * 46, 788, 16, '#d7f13b');
   return c;
 }
+
+const spaced = (text: string) => text.split('').join(String.fromCharCode(8202));
 
 function drawBall(g: CanvasRenderingContext2D, x: number, y: number, r: number, color: string) {
   g.fillStyle = color;

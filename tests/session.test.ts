@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canAppend, canConfirm, liveMatchOnCourt, playerStatus, reduceSession, roleOf, standings, startProblem,
+  canAppend, canConfirm, canPostpone, liveMatchOnCourt, skippedMatches, playerStatus, reduceSession, roleOf, standings, startProblem,
   type EventBody, type SessionEvent,
 } from '../src/core/session';
 import { DEFAULT_SETTINGS, type Settings } from '../src/core/types';
@@ -172,6 +172,60 @@ describe('session flow', () => {
     expect(s.settings.scorerMode).toBe('players');
     expect(s.notices[0]?.kind).toBe('host_stepped_off');
     expect(s.matches.filter((m) => m.status === 'queued' || m.status === 'live').every((m) => ![...m.a, ...m.b].includes('host'))).toBe(true);
+  });
+});
+
+describe('postpone and skipped list', () => {
+  it('play it later: a live match goes to the end of the queue with its points kept', () => {
+    const { push } = log({ format: 'singles' }, ['a', 'b', 'c', 'd']);
+    let s = push({ type: 'start', payload: {} });
+    const first = s.matches.find((m) => m.court === 1)!.id;
+    push({ type: 'point', payload: { matchId: first, court: 1, team: 0 } });
+    expect(canPostpone(s, s.matches.find((m) => m.id === first)!)).toBe(true);
+    s = push({ type: 'postpone_match', payload: { matchId: first } });
+    const moved = s.matches.find((m) => m.id === first)!;
+    expect(moved.status).toBe('queued');
+    expect(s.matches.filter((m) => m.status === 'queued').at(-1)!.id).toBe(first);
+    expect(moved.score.points[0]).toBe(1);
+    expect(liveMatchOnCourt(s, 1)!.id).not.toBe(first);
+  });
+
+  it('cannot postpone a finished match, or the last one left', () => {
+    const { push } = log({ format: 'singles' }, ['a', 'b']);
+    let s = push({ type: 'start', payload: {} });
+    expect(canPostpone(s, s.matches[0]!)).toBe(false);
+    for (let g = 0; g < 4; g++) winGame(push, 'm1', 1, 0);
+    s = push({ type: 'postpone_match', payload: { matchId: 'm1' } });
+    expect(s.ignored.at(-1)?.reason).toBe('not_postponable');
+  });
+
+  it('lists skipped matches and whether they can come back', () => {
+    const { push } = log({ format: 'singles' }, ['a', 'b', 'c']);
+    push({ type: 'start', payload: {} });
+    let s = push({ type: 'skip_match', payload: { matchId: 'm1' } });
+    expect(skippedMatches(s).map((r) => [r.match.id, r.canReturn])).toEqual([['m1', true]]);
+    const leaver = s.matches.find((m) => m.id === 'm1')!.a[0]!;
+    s = push({ type: 'mark_left', payload: { playerId: leaver, live: 'skip' } });
+    expect(skippedMatches(s).find((r) => r.match.id === 'm1')!.canReturn).toBe(false);
+  });
+});
+
+describe('host steps off', () => {
+  it('every approved player becomes a co-host; a join request does not', () => {
+    const { push } = log({ format: 'singles' }, ['host', 'b', 'c']);
+    push({ type: 'claim', payload: { playerId: 'b', deviceId: 'dev-b' } }, null);
+    push({ type: 'start', payload: {} });
+    push({ type: 'join_request', payload: { id: 'late', name: 'Late' } }, 'dev-late');
+    let s = push({ type: 'claim', payload: { playerId: 'late', deviceId: 'dev-late' } }, 'dev-late');
+    expect(roleOf(s, 'dev-b')).toBe('player');
+    s = push({ type: 'step_off', payload: { live: 'skip' } });
+    expect(s.openHost).toBe(true);
+    expect(roleOf(s, 'dev-b')).toBe('co_host');
+    expect(roleOf(s, 'dev-late')).toBe('player');
+    expect(roleOf(s, 'host-dev')).toBe('host');
+    expect(canAppend(s, 'dev-b', 'close', {}, [])).toBeNull();
+    expect(canAppend(s, 'dev-b', 'promote', {}, [])).toBe('host_only');
+    expect(canAppend(s, 'dev-late', 'skip_match', {}, [])).toBe('host_only');
   });
 });
 

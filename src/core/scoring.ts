@@ -127,3 +127,32 @@ export function serveSlot(state: ScoreState): number {
   const tb = state.points[0] + state.points[1];
   return games + Math.floor((tb + 1) / 2);
 }
+
+export type FinalProblem = 'tie' | 'short' | 'lead' | 'over_first' | 'over_lead' | 'over_tb' | null;
+
+/** Highest game count a side can finish on, for the score steppers. */
+export function maxGames(rules: Rules): number {
+  if (rules.margin === 'first_to') return rules.gamesTo;
+  return rules.tiebreak ? rules.gamesTo + 1 : 20;
+}
+
+/**
+ * Why a typed-in final score could not happen under these rules, or null when it could.
+ * First to n: the winner has exactly n. Win by 2: the match stops the moment someone leads by 2
+ * at n or more; with a tiebreak at n-n, it also ends n+1 to n.
+ */
+export function finalScoreProblem(gamesA: number, gamesB: number, rules: Rules): FinalProblem {
+  if (gamesA === gamesB) return 'tie';
+  const w = Math.max(gamesA, gamesB);
+  const l = Math.min(gamesA, gamesB);
+  const n = rules.gamesTo;
+  if (w < n) return 'short';
+  if (rules.margin === 'first_to') return w > n ? 'over_first' : null;
+  if (rules.tiebreak) {
+    if (w === n) return w - l >= 2 ? null : 'lead';
+    if (w === n + 1) return l >= n - 1 ? null : 'over_tb';
+    return 'over_tb';
+  }
+  if (w - l < 2) return 'lead';
+  return w > n && w - l > 2 ? 'over_lead' : null;
+}

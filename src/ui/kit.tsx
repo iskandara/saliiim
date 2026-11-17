@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { usePrefs } from '../i18n';
+import { usePrefs, useT } from '../i18n';
 import { backend } from '../state';
 
 // Icons are decorative: every button also carries a text label.
@@ -11,6 +11,7 @@ const paths: Record<string, string> = {
   play: 'M7 4v16l13-8z',
   skip: 'M5 4v16l10-8zM19 4v16',
   undo: 'M9 15L4 10l5-5M4 10h11a5 5 0 0 1 0 10h-4',
+  clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18',
   users: 'M3 21v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M17 14a4 4 0 0 1 4 4v3M15 4.3a3.5 3.5 0 0 1 0 6.4',
   trophy: 'M8 21h8M12 16v5M7 3h10v6a5 5 0 0 1-10 0zM17 5h3v3a3 3 0 0 1-3 3M7 5H4v3a3 3 0 0 0 3 3',
   radio: 'M12 12v.01M8.5 8.5a5 5 0 0 0 0 7M15.5 15.5a5 5 0 0 0 0-7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 18.4a9 9 0 0 0 0-12.8',
@@ -299,11 +300,62 @@ export function Field({ label, error, children }: { label: string; error?: strin
       <span className="field-label">{label}</span>
       {children}
       {error && (
-        <span className="field-error">
+        <span className="field-error" role="alert">
           <Icon name="info" size={14} /> {error}
         </span>
       )}
     </label>
+  );
+}
+
+/** One-line "add a name" form. A blank submit says so instead of doing nothing. */
+export function AddNameForm({ placeholder, button, onAdd }: { placeholder: string; button: string; onAdd: (name: string) => void }) {
+  const t = useT();
+  const [name, setName] = useState('');
+  const [blank, setBlank] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const errId = useId();
+  return (
+    <form
+      className="add-name"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = name.trim();
+        if (!n) {
+          setBlank(true);
+          input.current?.focus();
+          return;
+        }
+        setBlank(false);
+        setName('');
+        onAdd(n);
+      }}
+    >
+      <div className={`inline-form ${blank ? 'has-error' : ''}`}>
+        <input
+          ref={input}
+          value={name}
+          maxLength={40}
+          placeholder={placeholder}
+          aria-label={placeholder}
+          aria-invalid={blank || undefined}
+          aria-describedby={blank ? errId : undefined}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (blank && e.target.value.trim()) setBlank(false);
+          }}
+        />
+        <Btn kind="dark" icon="plus" type="submit">
+          {button}
+        </Btn>
+      </div>
+      {blank && (
+        <span id={errId} className="field-error" role="alert">
+          <Icon name="info" size={14} /> {t('name_needed')}
+        </span>
+      )}
+    </form>
   );
 }
 

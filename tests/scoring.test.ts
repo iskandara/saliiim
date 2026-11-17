@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyPoint, initialScore, pointLabels, replayScore, scoreBanner, serveSlot, type ScoreInput, type ScoreState } from '../src/core/scoring';
+import { applyPoint, finalScoreProblem, initialScore, maxGames, pointLabels, replayScore, scoreBanner, serveSlot, type ScoreInput, type ScoreState } from '../src/core/scoring';
 import { DEFAULT_RULES, type Rules, type Team } from '../src/core/types';
 
 const rules = (r: Partial<Rules> = {}): Rules => ({ ...DEFAULT_RULES, ...r });
@@ -136,5 +136,33 @@ describe('serve slot', () => {
     expect(serveSlot(s)).toBe(7);
     s = play('a', r, s);
     expect(serveSlot(s)).toBe(8);
+  });
+});
+
+describe('typed-in final scores follow the rules', () => {
+  const base = { gamesTo: 4 as const, deuce: 'no_ad' as const, tiebreakTo: 7 as const };
+  it('race to 4: the winner has exactly 4', () => {
+    const r = { ...base, margin: 'first_to' as const, tiebreak: false };
+    expect(finalScoreProblem(4, 3, r)).toBeNull();
+    expect(finalScoreProblem(0, 4, r)).toBeNull();
+    expect(finalScoreProblem(5, 3, r)).toBe('over_first');
+    expect(finalScoreProblem(3, 2, r)).toBe('short');
+    expect(finalScoreProblem(2, 2, r)).toBe('tie');
+    expect(maxGames(r)).toBe(4);
+  });
+  it('win by 2: ends the moment someone leads by 2 at 4 or more', () => {
+    const r = { ...base, margin: 'win_by_2' as const, tiebreak: false };
+    expect(finalScoreProblem(4, 2, r)).toBeNull();
+    expect(finalScoreProblem(6, 4, r)).toBeNull();
+    expect(finalScoreProblem(4, 3, r)).toBe('lead');
+    expect(finalScoreProblem(6, 3, r)).toBe('over_lead');
+  });
+  it('win by 2 with a tiebreak at 4-4: tops out at 5', () => {
+    const r = { ...base, margin: 'win_by_2' as const, tiebreak: true };
+    expect(finalScoreProblem(5, 4, r)).toBeNull();
+    expect(finalScoreProblem(5, 3, r)).toBeNull();
+    expect(finalScoreProblem(5, 2, r)).toBe('over_tb');
+    expect(finalScoreProblem(6, 4, r)).toBe('over_tb');
+    expect(maxGames(r)).toBe(5);
   });
 });

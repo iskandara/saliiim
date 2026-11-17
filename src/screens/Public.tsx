@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  canConfirm, canScore, liveMatchOnCourt, partnerOf, pendingResult, playerStatus, sideName, unitForPlayer,
+  canConfirm, isHostRole, canScore, liveMatchOnCourt, partnerOf, pendingResult, playerStatus, sideName, unitForPlayer,
   type MatchState, type SessionState,
 } from '../core/session';
 import { useT } from '../i18n';
@@ -132,6 +132,7 @@ function JoinView({ ctx, onWatch }: { ctx: SessionCtx; onWatch: () => void }) {
   const toast = useToast();
   const [joining, setJoining] = useState(false);
   const [name, setName] = useState('');
+  const [blank, setBlank] = useState(false);
   const [busy, setBusy] = useState(false);
   const hostName = s.players.find((p) => p.id === s.hostPlayerId)?.name ?? s.settings.hostName;
   const listed = s.players.filter((p) => p.status === 'active' || p.status === 'pending');
@@ -165,17 +166,33 @@ function JoinView({ ctx, onWatch }: { ctx: SessionCtx; onWatch: () => void }) {
         </div>
       ) : (
         <form
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             const n = name.trim();
-            if (!n) return;
+            if (!n) {
+              setBlank(true);
+              (e.currentTarget.elements.namedItem('name') as HTMLInputElement | null)?.focus();
+              return;
+            }
             void act(() => backend.join(sessionId!, newId(), n));
           }}
         >
-          <Field label={t('your_name')}>
-            <input value={name} maxLength={40} autoFocus placeholder={t('your_name_ph')} onChange={(e) => setName(e.target.value)} />
+          <Field label={t('your_name')} error={blank ? t('name_needed') : null}>
+            <input
+              name="name"
+              value={name}
+              maxLength={40}
+              autoFocus
+              placeholder={t('your_name_ph')}
+              aria-invalid={blank || undefined}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (blank && e.target.value.trim()) setBlank(false);
+              }}
+            />
           </Field>
-          <Btn kind="primary" icon="check" type="submit" disabled={busy || !name.trim()}>
+          <Btn kind="primary" icon="check" type="submit" disabled={busy}>
             {t('im_in')}
           </Btn>
         </form>
@@ -309,6 +326,15 @@ function MeView({ ctx, slug }: { ctx: SessionCtx; slug: string }) {
         {s.status === 'live' && <LiveBadge />}
       </div>
       {card}
+      {s.status === 'live' && isHostRole(ctx.role) && ctx.sessionId && (
+        <div className="card cohost-card">
+          <p className="small">{t('cohost_note')}</p>
+          <Link className="btn primary" to={`/s/${ctx.sessionId}`}>
+            <Icon name="grid" />
+            <span>{t('manage_session')}</span>
+          </Link>
+        </div>
+      )}
       <p className="small muted">{t('wrong_name')}</p>
       <Notices s={s} />
       {s.status === 'live' && (

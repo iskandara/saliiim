@@ -4,7 +4,18 @@ import { useT } from '../i18n';
 import { backend } from '../state';
 import { Ball, Btn } from '../ui/kit';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
-import { downloadCanvas, drawSticker, loadLogo, STICKER_FONT } from '../ui/sticker';
+import { downloadCanvas, drawSticker, loadLogo, needsDarkPreview, STICKER_FONT, STICKER_THEMES, themeSwatch, type StickerTheme } from '../ui/sticker';
+
+const THEME_KEY = 'saliiim:sticker-theme';
+
+function savedTheme(): StickerTheme {
+  try {
+    const v = localStorage.getItem(THEME_KEY) as StickerTheme | null;
+    return v && STICKER_THEMES.includes(v) ? v : 'court';
+  } catch {
+    return 'court';
+  }
+}
 
 /** Closed-session summary. Players get their own sticker; everyone else gets the winner's. */
 export function SummaryView({ s, device, sessionId }: { s: SessionState; device: string | null; sessionId: string | null }) {
@@ -19,14 +30,25 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
   const gd = (n: number) => (n > 0 ? `+${n}` : String(n));
 
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-  const stickerKey = row ? `${row.unit}|${row.wins}|${row.losses}|${row.gamesWon}|${rank}|${t('sticker_winner')}|${t('record')}|${s.settings.name}` : '';
+  const [theme, setTheme] = useState<StickerTheme>(savedTheme);
+  const pickTheme = (v: StickerTheme) => {
+    setTheme(v);
+    try {
+      localStorage.setItem(THEME_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
+  const stickerKey = row ? `${theme}|${row.unit}|${row.wins}|${row.losses}|${row.gamesWon}|${rank}|${t('sticker_winner')}|${t('sticker_promo')}|${s.settings.name}` : '';
   useEffect(() => {
     if (!row) return;
     let alive = true;
     // Canvas only uses fonts that are already loaded, so wait for the display face first.
     let logo: HTMLImageElement | null = null;
     const draw = () => alive && setCanvas(drawSticker({
+      theme,
       logo,
+      promo: t('sticker_promo'),
       session: s.settings.name,
       date,
       label: rank === 1 ? t('sticker_winner') : t('sticker_place', { n: rank, total: table.length }),
@@ -38,7 +60,7 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
       ],
     }));
     Promise.all([
-      loadLogo().then((img) => {
+      loadLogo(theme).then((img) => {
         logo = img;
       }),
       document.fonts.load(`900 64px ${STICKER_FONT}`),
@@ -90,7 +112,23 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
 
       {canvas && (
         <section>
-          <div className="sticker-preview">
+          <h3>{t('sticker_style')}</h3>
+          <div className="swatches" role="radiogroup" aria-label={t('sticker_style')}>
+            {STICKER_THEMES.map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={theme === v}
+                className={theme === v ? 'on' : ''}
+                onClick={() => pickTheme(v)}
+              >
+                <span className={`dot ${v.startsWith('clear') ? 'clear' : ''}`} style={{ background: themeSwatch(v) }} aria-hidden="true" />
+                <span>{t(`st_${v}` as 'st_court')}</span>
+              </button>
+            ))}
+          </div>
+          <div className={`sticker-preview ${needsDarkPreview(theme) ? 'on-dark' : ''}`}>
             <img src={canvas.toDataURL('image/png')} alt={`${unitName(s, row!.unit)} sticker`} />
           </div>
           <p className="small">{t('sticker_caption')}</p>

@@ -29,6 +29,7 @@ export type EventBody =
   | { type: 'step_off'; payload: { live: LiveChoice } }
   | { type: 'skip_match'; payload: { matchId: string } }
   | { type: 'unskip_match'; payload: { matchId: string } }
+  | { type: 'postpone_match'; payload: { matchId: string } }
   | { type: 'point'; payload: { matchId: string; court: number; team: Team } }
   | { type: 'undo'; payload: { matchId: string; court: number } }
   | { type: 'set_server'; payload: { matchId: string; court: number; playerId: string } }
@@ -54,7 +55,7 @@ export type SessionEvent = EventBody & {
 export const HOST_EVENTS: EventType[] = [
   'update_settings', 'add_player', 'remove_player', 'reset_claim', 'approve_join', 'decline_join',
   'set_pairs', 'start', 'add_late', 'mark_left', 'step_off', 'skip_match', 'unskip_match', 'edit_result',
-  'hand_scoring', 'promote', 'close',
+  'hand_scoring', 'promote', 'close', 'postpone_match',
 ];
 /** Events that need the court lock. */
 export const SCORING_EVENTS: EventType[] = ['point', 'undo', 'set_server'];
@@ -112,6 +113,8 @@ export interface SessionState {
   matches: MatchState[];
   hostDevices: string[];
   cohostDevices: string[];
+  /** Set once the host steps off: from then on every player in the session is a co-host. */
+  openHost: boolean;
   hostPlayerId: string | null;
   notices: Notice[];
   closedBy: 'host' | 'auto' | null;
@@ -139,6 +142,7 @@ export function emptySession(): SessionState {
     matches: [],
     hostDevices: [],
     cohostDevices: [],
+    openHost: false,
     hostPlayerId: null,
     notices: [],
     closedBy: null,
@@ -408,6 +412,7 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       const hostId = s.hostPlayerId ?? fail('host_not_playing');
       leave(s, hostId, ev.payload.live);
       if (s.settings.scorerMode === 'host') s.settings = { ...s.settings, scorerMode: 'players' };
+      s.openHost = true;
       s.notices.push({ kind: 'host_stepped_off', name: player(s, hostId).name, seq: ev.seq });
       break;
     }
@@ -425,6 +430,15 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       m.status = 'queued';
       m.court = null;
       s.matches = [m, ...s.matches.filter((x) => x !== m)];
+      break;
+    }
+    case 'postpone_match': {
+      // Play it later: back to the end of the queue, keeping any points already played.
+      const m = match(s, ev.payload.matchId);
+      if (!live || (m.status !== 'queued' && m.status !== 'live')) fail('not_postponable');
+      m.status = 'queued';
+      m.court = null;
+      s.matches = [...s.matches.filter((x) => x !== m), m];
       break;
     }
     case 'point':
@@ -542,8 +556,24 @@ export function roleOf(s: SessionState, deviceId: string | null): Role {
   if (!deviceId) return 'spectator';
   if (s.hostDevices.includes(deviceId)) return 'host';
   if (s.cohostDevices.includes(deviceId)) return 'co_host';
-  if (s.players.some((p) => p.deviceId === deviceId && p.status !== 'removed' && p.status !== 'declined')) return 'player';
-  return 'spectator';
+  const p = s.players.find((x) => x.deviceId === deviceId && x.status !== 'removed' && x.status !== 'declined');
+  if (!p) return 'spectator';
+  // After the host steps off, every approved player runs the session; join requests still wait.
+  if (s.openHost && (p.status === 'active' || p.status === 'left')) return 'co_host';
+  return 'player';
+}
+
+/** A match can wait for later when it has not finished and another match can go first. */
+export function canPostpone(s: SessionState, m: MatchState): boolean {
+  if (s.status !== 'live' || (m.status !== 'queued' && m.status !== 'live')) return false;
+  return s.matches.some((x) => x !== m && x.status === 'queued');
+}
+
+/** Skipped matches that can go back in the queue (everyone in them is still here). */
+export function skippedMatches(s: SessionState): { match: MatchState; canReturn: boolean }[] {
+  return s.matches
+    .filter((m) => m.status === 'skipped')
+    .map((m) => ({ match: m, canReturn: s.status === 'live' && [...m.a, ...m.b].every((id) => s.players.find((p) => p.id === id)?.status === 'active') }));
 }
 
 export const isHostRole = (r: Role) => r === 'host' || r === 'co_host';

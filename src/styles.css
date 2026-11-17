@@ -1618,3 +1618,94 @@ section > h3 {
   transform: translateX(-50%);
   z-index: 40;
 }
+
+/* Add-a-name form: the blank-name message sits under the row. */
+.add-name {
+  display: grid;
+  gap: 6px;
+}
+
+/* Skipped matches fold away under their heading. */
+.skipped > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+.skipped > summary::-webkit-details-marker {
+  display: none;
+}
+.skipped > summary h3 {
+  margin: 0;
+}
+.skipped > summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 2.5px solid currentColor;
+  border-bottom: 2.5px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.15s;
+}
+.skipped[open] > summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+.skipped > summary:focus-visible {
+  outline: 3px solid var(--focus, var(--ball));
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Sticker colour picker: a swatch and a name per option, three to a row. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.swatches button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.swatches button.on {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--ball);
+}
+.swatches button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.swatches .dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.18);
+}
+.swatches .dot.clear {
+  background-image: repeating-conic-gradient(rgba(0, 0, 0, 0.18) 0 25%, transparent 0 50%) !important;
+  background-size: 8px 8px !important;
+}
+.sticker-preview.on-dark {
+  background: repeating-conic-gradient(#33433a 0 25%, #4a5a50 0 50%) 0 0 / 20px 20px;
+}
+@media (max-width: 440px) {
+  .swatches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

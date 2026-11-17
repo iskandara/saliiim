@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { pointLabels } from '../core/scoring';
+import { finalScoreProblem, maxGames, pointLabels } from '../core/scoring';
 import {
-  biggestWin, liveMatchOnCourt, queue, sideName, standings, unitName, waitingFor,
+  biggestWin, canPostpone, liveMatchOnCourt, skippedMatches, queue, sideName, standings, unitName, waitingFor,
   type MatchState, type SessionState,
 } from '../core/session';
+import type { Rules } from '../core/types';
 import { useT } from '../i18n';
 import { Btn, Icon, Sheet, Stepper } from './kit';
 
@@ -81,7 +82,7 @@ export function NextUp({ s, render }: { s: SessionState; render?: (m: MatchState
       <ul className="list">
         {q.map((m) => (
           <li key={m.id} className="row">
-            <span>
+            <span className="grow">
               {sideName(s, m.a)} <span className="muted">{t('vs')}</span> {sideName(s, m.b)}
             </span>
             {render?.(m)}
@@ -235,21 +236,62 @@ export function ProgressLine({ s }: { s: SessionState }) {
 }
 
 /** Type in the final games after a match, instead of scoring it live. */
-export function EnterScoreSheet({ s, m, open, onClose, onSave }: { s: SessionState; m: MatchState; open: boolean; onClose: () => void; onSave: (gamesA: number, gamesB: number) => void }) {
+/** The rule-check message for a final score, or null when the score could happen. */
+export function finalScoreMessage(t: ReturnType<typeof useT>, rules: Rules, gamesA: number, gamesB: number, allowUnfinished = false): string | null {
+  const problem = finalScoreProblem(gamesA, gamesB, rules);
+  if (allowUnfinished && (problem === 'short' || problem === 'lead')) return null;
+  const n = rules.gamesTo;
+  switch (problem) {
+    case null:
+      return null;
+    case 'tie':
+      return t('enter_tie');
+    case 'short':
+      return t('enter_short', { n });
+    case 'over_first':
+      return t('enter_over_first', { n });
+    case 'lead':
+      return t('enter_lead');
+    case 'over_lead':
+      return t('enter_over_lead');
+    case 'over_tb':
+      return t('enter_over_tb', { n, m: n + 1 });
+  }
+}
+
+export function EnterScoreSheet({ s, m, open, onClose, onSave, editing = false }: {
+  s: SessionState;
+  m: MatchState;
+  open: boolean;
+  onClose: () => void;
+  onSave: (gamesA: number, gamesB: number) => void;
+  /** Correcting a finished result instead of entering a new one. */
+  editing?: boolean;
+}) {
   const t = useT();
-  const start = m.entered ?? { gamesA: m.score.games[0], gamesB: m.score.games[1] };
+  const rules = s.settings.rules;
+  const top = maxGames(rules);
+  const start = (editing && m.result) || m.entered || { gamesA: m.score.games[0], gamesB: m.score.games[1] };
   const [a, setA] = useState(start.gamesA);
   const [b, setB] = useState(start.gamesB);
+  const [tried, setTried] = useState(false);
   useEffect(() => {
     if (open) {
       setA(start.gamesA);
       setB(start.gamesB);
+      setTried(false);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tie = a === b;
+  // A result settled when someone left mid-match may stay unfinished.
+  const problem = finalScoreMessage(t, rules, a, b, editing && (m.result?.reason === 'kept' || m.result?.reason === 'awarded'));
+  // A tie or a score past the rules shows straight away; "not finished yet" waits for Save,
+  // so it doesn't nag while the steppers are still moving up.
+  const shown = problem && (tried || a === b || Math.max(a, b) > rules.gamesTo) ? problem : null;
   return (
-    <Sheet open={open} onClose={onClose} title={t('enter_title')}>
-      <p className="small muted">{t('enter_help')}</p>
+    <Sheet open={open} onClose={onClose} title={t(editing ? 'edit_title' : 'enter_title')}>
+      <p className="small muted">
+        {!editing && t('enter_help')} <b>{t(rules.margin === 'win_by_2' ? 'enter_rule_lead' : 'enter_rule', { n: rules.gamesTo })}</b>
+      </p>
       {([
         [m.a, a, setA],
         [m.b, b, setB],
@@ -258,22 +300,92 @@ export function EnterScoreSheet({ s, m, open, onClose, onSave }: { s: SessionSta
           <span className="grow">
             <b>{sideName(s, side)}</b>
           </span>
-          <Stepper label={t('enter_games', { team: sideName(s, side) })} value={value} min={0} max={20} onChange={set} />
+          <Stepper label={t('enter_games', { team: sideName(s, side) })} value={value} min={0} max={top} onChange={set} />
         </div>
       ))}
-      {tie && (
+      {shown && (
         <p className="field-error" role="alert">
-          {t('enter_tie')}
+          {shown}
         </p>
       )}
       <div className="actions">
         <Btn icon="left" onClick={onClose}>
           {t('cancel')}
         </Btn>
-        <Btn kind="primary" icon="check" disabled={tie} onClick={() => onSave(a, b)}>
-          {t('enter_save')}
+        <Btn
+          kind="primary"
+          icon="check"
+          disabled={a === b}
+          onClick={() => {
+            setTried(true);
+            if (!problem) onSave(a, b);
+          }}
+        >
+          {t(editing ? 'save' : 'enter_save')}
         </Btn>
       </div>
     </Sheet>
+  );
+}
+
+/** Confirm before skipping. Offers "play it later" when another match can go first. */
+export function SkipSheet({ s, m, onClose, onSkip, onPostpone }: {
+  s: SessionState;
+  m: MatchState | null;
+  onClose: () => void;
+  onSkip: (m: MatchState) => void;
+  onPostpone: (m: MatchState) => void;
+}) {
+  const t = useT();
+  const later = !!m && canPostpone(s, m);
+  return (
+    <Sheet open={!!m} onClose={onClose} title={t('skip_title')}>
+      {m && <p>{t(m.inputs.length ? 'skip_body' : 'skip_body_unplayed', { a: sideName(s, m.a), b: sideName(s, m.b) })}</p>}
+      {later && <p className="small muted">{t('postpone_help')}</p>}
+      <div className="actions column">
+        {later && (
+          <Btn kind="primary" icon="clock" onClick={() => m && onPostpone(m)}>
+            {t('postpone')}
+          </Btn>
+        )}
+        <Btn kind="danger" icon="skip" onClick={() => m && onSkip(m)}>
+          {t('skip')}
+        </Btn>
+        <Btn icon="left" onClick={onClose}>
+          {t('cancel')}
+        </Btn>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Skipped matches, with "play again" for the ones whose players are all still here. */
+export function SkippedList({ s, onReturn }: { s: SessionState; onReturn?: (m: MatchState) => void }) {
+  const t = useT();
+  const rows = skippedMatches(s);
+  if (!rows.length) return null;
+  return (
+    <details className="skipped">
+      <summary>
+        <h3>{t('skipped_title', { n: rows.length })}</h3>
+      </summary>
+      <ul className="list">
+        {rows.map(({ match: m, canReturn }) => (
+          <li key={m.id} className="row">
+            <span className="grow">
+              {sideName(s, m.a)} <span className="muted">{t('vs')}</span> {sideName(s, m.b)}
+            </span>
+            {onReturn &&
+              (canReturn ? (
+                <button className="link-btn" onClick={() => onReturn(m)}>
+                  {t('play_again')}
+                </button>
+              ) : (
+                <span className="small muted">{t('someone_left')}</span>
+              ))}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

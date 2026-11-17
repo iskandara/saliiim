@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { pointLabels, scoreBanner, serveSlot } from '../core/scoring';
 import { currentServer } from '../core/serve';
 import { canConfirm, canScore, isHostRole, liveMatchOnCourt, nameOf, pendingResult, sideName, type MatchState } from '../core/session';
-import { EnterScoreSheet } from '../ui/session-ui';
+import { EnterScoreSheet, SkipSheet } from '../ui/session-ui';
 import type { Team } from '../core/types';
 import { useT } from '../i18n';
 import { backend } from '../state';
@@ -293,29 +293,28 @@ export function Scorer({ ctx, court, back, backLabel = 'back_courts' }: { ctx: S
         </div>
       </Sheet>
 
-      <Sheet open={skipAsk} onClose={() => setSkipAsk(false)} title={t('skip_title')}>
-        <p>{t(m.inputs.length ? 'skip_body' : 'skip_body_unplayed', { a: sideName(s, m.a), b: sideName(s, m.b) })}</p>
-        <div className="actions">
-          <Btn icon="left" onClick={() => setSkipAsk(false)}>
-            {t('cancel')}
-          </Btn>
-          <Btn
-            kind="danger"
-            icon="skip"
-            onClick={() =>
-              send(async () => {
-                setSkipAsk(false);
-                const id = m.id;
-                await append({ type: 'skip_match', payload: { matchId: id } });
-                toast(t('skipped_toast'), { label: t('undo'), run: () => void send(() => append({ type: 'unskip_match', payload: { matchId: id } })) });
-                nav(back);
-              })
-            }
-          >
-            {t('skip')}
-          </Btn>
-        </div>
-      </Sheet>
+      <SkipSheet
+        s={s}
+        m={skipAsk ? m : null}
+        onClose={() => setSkipAsk(false)}
+        onSkip={(x) =>
+          send(async () => {
+            setSkipAsk(false);
+            const id = x.id;
+            await append({ type: 'skip_match', payload: { matchId: id } });
+            toast(t('skipped_toast'), { label: t('undo'), run: () => void send(() => append({ type: 'unskip_match', payload: { matchId: id } })) });
+            nav(back);
+          })
+        }
+        onPostpone={(x) =>
+          send(async () => {
+            setSkipAsk(false);
+            await append({ type: 'postpone_match', payload: { matchId: x.id } });
+            toast(t('postponed_toast'));
+            nav(back);
+          })
+        }
+      />
     </div>
   );
 }

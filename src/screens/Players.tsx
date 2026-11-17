@@ -6,7 +6,7 @@ import { useT } from '../i18n';
 import { backend, saveRoster } from '../state';
 import { newId } from '../state/backend';
 import { errorCode, type SessionCtx } from '../state/useSession';
-import { absUrl, Btn, copyText, Icon, Sheet, useToast } from '../ui/kit';
+import { absUrl, AddNameForm, Btn, copyText, Icon, Sheet, useToast } from '../ui/kit';
 import { HostGate } from './HostGate';
 
 export function Players() {
@@ -35,7 +35,6 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
   const t = useT();
   const toast = useToast();
   const nav = useNavigate();
-  const [name, setName] = useState('');
   const [courtside, setCourtside] = useState(false);
   const [moved, setMoved] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -57,13 +56,7 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
     }
   };
 
-  const add = () =>
-    run(async () => {
-      const n = name.trim();
-      if (!n) return;
-      setName('');
-      await append({ type: 'add_player', payload: { id: newId(), name: n, via: 'manual' } });
-    });
+  const add = (n: string) => run(() => append({ type: 'add_player', payload: { id: newId(), name: n, via: 'manual' } }));
 
   // Tap one name, then another, to swap their places in the pairs.
   const pick = (id: string) =>
@@ -141,18 +134,7 @@ function PlayersBody({ ctx }: { ctx: SessionCtx }) {
             </li>
           ))}
         </ol>
-        <form
-          className="inline-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void add();
-          }}
-        >
-          <input value={name} maxLength={40} placeholder={t('add_player_ph')} onChange={(e) => setName(e.target.value)} aria-label={t('add_player_ph')} />
-          <Btn kind="dark" icon="plus" type="submit">
-            {t('add')}
-          </Btn>
-        </form>
+        <AddNameForm placeholder={t('add_player_ph')} button={t('add')} onAdd={add} />
       </section>
 
       {fixed && pairs.length > 0 && (

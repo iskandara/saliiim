@@ -70,7 +70,7 @@ The publishable key is safe in the browser: all writes go through Postgres funct
 
 ### Database migrations
 
-Run each file in `supabase/migrations/` once, in order, in the Supabase SQL Editor: `0001_init.sql`, `0002_record_result.sql`, `0003_metrics.sql`.
+Run each file in `supabase/migrations/` once, in order, in the Supabase SQL Editor: `0001_init.sql`, `0002_record_result.sql`, `0003_metrics.sql`, `0004_open_host_postpone.sql`.
 
 ### Spam protection (Cloudflare Turnstile, free)
 

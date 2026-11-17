@@ -4,7 +4,7 @@ import { liveMatchOnCourt, type LiveChoice, type PlayerState, type SessionState 
 import { useT } from '../i18n';
 import { newId } from '../state/backend';
 import type { SessionCtx } from '../state/useSession';
-import { Btn, Icon, Sheet } from '../ui/kit';
+import { AddNameForm, Btn, Icon, Sheet } from '../ui/kit';
 import { useRunner } from './Board';
 import { HostGate } from './HostGate';
 
@@ -26,7 +26,6 @@ function RosterBody({ ctx }: { ctx: SessionCtx }) {
   const run = useRunner();
   const [leaving, setLeaving] = useState<PlayerState | null>(null);
   const [stepping, setStepping] = useState(false);
-  const [late, setLate] = useState('');
 
   const listed = s.players.filter((p) => p.status === 'active' || p.status === 'left');
   const leaveScore = leaving ? liveScore(s, leaving.id) : null;
@@ -88,21 +87,7 @@ function RosterBody({ ctx }: { ctx: SessionCtx }) {
         })}
       </ul>
 
-      <form
-        className="inline-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const name = late.trim();
-          if (!name) return;
-          setLate('');
-          void run(() => append({ type: 'add_late', payload: { id: newId(), name } }));
-        }}
-      >
-        <input value={late} maxLength={40} placeholder={t('add_late')} aria-label={t('add_late')} onChange={(e) => setLate(e.target.value)} />
-        <Btn kind="dark" icon="plus" type="submit">
-          {t('add')}
-        </Btn>
-      </form>
+      <AddNameForm placeholder={t('add_late')} button={t('add')} onAdd={(name) => void run(() => append({ type: 'add_late', payload: { id: newId(), name } }))} />
 
       <Link className="btn ghost" to={`/s/${sessionId}`}>
         <Icon name="left" />
@@ -132,6 +117,7 @@ function RosterBody({ ctx }: { ctx: SessionCtx }) {
           <li>{t('step_1')}</li>
           {s.settings.scorerMode === 'host' && <li>{t('step_2')}</li>}
           <li>{t('step_3')}</li>
+          <li>{t('step_4')}</li>
         </ul>
         {hostScore && <p className="small">{t('leave_live', { score: hostScore })}</p>}
         <div className="actions column">

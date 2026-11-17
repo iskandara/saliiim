@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { allMatchesFinished, sideName, type MatchState } from '../core/session';
+import { allMatchesFinished, type MatchState } from '../core/session';
 import { useT } from '../i18n';
 import { backend, hostKeyFor } from '../state';
 import { errorCode, type SessionCtx } from '../state/useSession';
 import { absUrl, Btn, copyText, Icon, inAppBrowser, Sheet, useToast } from '../ui/kit';
-import { CourtsList, EnterScoreSheet, LiveBadge, NextUp, Notices, ProgressLine } from '../ui/session-ui';
+import { CourtsList, EnterScoreSheet, LiveBadge, NextUp, Notices, ProgressLine, SkippedList, SkipSheet } from '../ui/session-ui';
 import { HostGate } from './HostGate';
 
 export function Board() {
@@ -70,6 +70,19 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
       setSkipping(null);
       await append({ type: 'skip_match', payload: { matchId: m.id } });
       toast(t('skipped_toast'), { label: t('undo'), run: () => void run(() => append({ type: 'unskip_match', payload: { matchId: m.id } })) });
+    });
+
+  const postpone = (m: MatchState) =>
+    run(async () => {
+      setSkipping(null);
+      await append({ type: 'postpone_match', payload: { matchId: m.id } });
+      toast(t('postponed_toast'));
+    });
+
+  const playAgain = (m: MatchState) =>
+    run(async () => {
+      await append({ type: 'unskip_match', payload: { matchId: m.id } });
+      toast(t('played_again_toast'));
     });
 
   const askSkip = (m: MatchState) => setSkipping(m);
@@ -178,6 +191,7 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
               </button>
             )}
           />
+          <SkippedList s={s} onReturn={playAgain} />
 
           <section>
             <h3>{t('share')}</h3>
@@ -246,19 +260,7 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
         />
       )}
 
-      <Sheet open={!!skipping} onClose={() => setSkipping(null)} title={t('skip_title')}>
-        {skipping && (
-          <p>{t(skipping.inputs.length ? 'skip_body' : 'skip_body_unplayed', { a: sideName(s, skipping.a), b: sideName(s, skipping.b) })}</p>
-        )}
-        <div className="actions">
-          <Btn icon="left" onClick={() => setSkipping(null)}>
-            {t('cancel')}
-          </Btn>
-          <Btn kind="danger" icon="skip" onClick={() => skipping && skip(skipping)}>
-            {t('skip')}
-          </Btn>
-        </div>
-      </Sheet>
+      <SkipSheet s={s} m={skipping} onClose={() => setSkipping(null)} onSkip={skip} onPostpone={postpone} />
 
       <Sheet open={handing} onClose={() => setHanding(false)} title={t('hand_title')}>
         <p>{t('hand_body')}</p>

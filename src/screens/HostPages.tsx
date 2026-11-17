@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { sideName, type MatchState } from '../core/session';
+import type { MatchState } from '../core/session';
 import { useT } from '../i18n';
 import { backend, remember } from '../state';
 import { errorCode, type SessionCtx } from '../state/useSession';
-import { Btn, Center, Icon, Page, Sheet } from '../ui/kit';
-import { ResultsList, StandingsTable } from '../ui/session-ui';
+import { Center, Icon, Page } from '../ui/kit';
+import { EnterScoreSheet, ResultsList, StandingsTable } from '../ui/session-ui';
 import { useRunner } from './Board';
 import { HostGate } from './HostGate';
 import { LiveView } from './LiveView';
@@ -55,8 +55,6 @@ function HostSummaryBody({ ctx }: { ctx: SessionCtx }) {
   const t = useT();
   const run = useRunner();
   const [editing, setEditing] = useState<MatchState | null>(null);
-  const [a, setA] = useState(0);
-  const [b, setB] = useState(0);
   const s = ctx.state;
   if (s.status !== 'closed') {
     return (
@@ -64,49 +62,28 @@ function HostSummaryBody({ ctx }: { ctx: SessionCtx }) {
         <h1>{t('summary')}</h1>
         <ResultsList
           s={s}
-          onEdit={(m) => {
-            setEditing(m);
-            setA(m.result!.gamesA);
-            setB(m.result!.gamesB);
-          }}
+          onEdit={(m) => setEditing(m)}
         />
         <Link className="btn ghost" to={`/s/${ctx.sessionId}`}>
           <Icon name="left" />
           <span>{t('back_courts')}</span>
         </Link>
-        <Sheet open={!!editing} onClose={() => setEditing(null)} title={t('edit_title')}>
-          {editing && (
-            <div className="edit-score">
-              <label>
-                <span>{sideName(s, editing.a)}</span>
-                <input type="number" min={0} max={20} value={a} onChange={(e) => setA(Number(e.target.value))} />
-              </label>
-              <label>
-                <span>{sideName(s, editing.b)}</span>
-                <input type="number" min={0} max={20} value={b} onChange={(e) => setB(Number(e.target.value))} />
-              </label>
-            </div>
-          )}
-          <div className="actions">
-            <Btn icon="left" onClick={() => setEditing(null)}>
-              {t('cancel')}
-            </Btn>
-            <Btn
-              kind="primary"
-              icon="check"
-              disabled={a === b}
-              onClick={() =>
-                run(async () => {
-                  const m = editing!;
-                  setEditing(null);
-                  await ctx.append({ type: 'edit_result', payload: { matchId: m.id, gamesA: a, gamesB: b } });
-                })
-              }
-            >
-              {t('save')}
-            </Btn>
-          </div>
-        </Sheet>
+        {editing && (
+          <EnterScoreSheet
+            s={s}
+            m={editing}
+            open={!!editing}
+            editing
+            onClose={() => setEditing(null)}
+            onSave={(a, b) =>
+              run(async () => {
+                const m = editing;
+                setEditing(null);
+                await ctx.append({ type: 'edit_result', payload: { matchId: m.id, gamesA: a, gamesB: b } });
+              })
+            }
+          />
+        )}
       </>
     );
   }
