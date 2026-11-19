@@ -25,7 +25,6 @@ export function Home() {
   return (
     <Page header="full">
       <section className="court-surface hero">
-        <p className="eyebrow">{t('home_eyebrow')}</p>
         <h1>{t('tagline')}</h1>
         <p>{t('home_sub')}</p>
         <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>

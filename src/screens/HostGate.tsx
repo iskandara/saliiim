@@ -54,7 +54,8 @@ export function LoadError({ code }: { code: string }) {
   return (
     <Page>
       <div className="box warn" role="alert">
-        <p>{code === 'offline' ? t('error_offline') : t('error_load', { code })}</p>
+        <p>{code === 'offline' ? t('error_offline') : t('error_load')}</p>
+        {code !== 'offline' && <p className="small muted">{t('captcha_code', { code })}</p>}
         <Btn icon="undo" onClick={() => window.location.reload()}>
           {t('retry')}
         </Btn>

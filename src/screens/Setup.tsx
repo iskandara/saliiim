@@ -93,7 +93,7 @@ export function Setup() {
       <h1>{t('new_session')}</h1>
       <section className="panel">
         <h3>{t('setup_basics')}</h3>
-      <Field label={t('your_name')} error={hostErr}>
+      <Field label={t('host_name_label')} error={hostErr}>
         <input id="host-name" value={s.hostName} maxLength={40} placeholder={t('your_name_ph')} onChange={(e) => set('hostName', e.target.value)} />
       </Field>
       <Field label={t('session_name')} error={nameErr}>

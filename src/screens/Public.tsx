@@ -122,7 +122,7 @@ function PublicHomeBody({ ctx, slug }: { ctx: SessionCtx; slug: string }) {
 function formatLine(s: SessionState, t: ReturnType<typeof useT>) {
   const parts = [t(s.settings.format)];
   if (s.settings.format === 'doubles') parts.push(t(s.settings.partnerMode));
-  parts.push(t('first_to_n', { n: s.settings.rules.gamesTo }), `${s.settings.courts} ${t('courts').toLowerCase()}`);
+  parts.push(t('first_to_n', { n: s.settings.rules.gamesTo }), t('courts_count', { n: s.settings.courts }));
   return parts.join(' · ');
 }
 
