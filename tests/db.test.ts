@@ -44,6 +44,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/0002_record_result.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0003_metrics.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0004_open_host_postpone.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0005_feedback.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -108,12 +109,28 @@ describe('supabase migration', () => {
     expect(w).toMatchObject({ sessions: 1, players: 3 });
   });
 
+  it('feedback: needs a rating or a message, is rate limited, and stores no device id', async () => {
+    const fb = (body: Record<string, unknown>) => JSON.stringify({ kind: 'bug', source: 'summary', lang: 'en', sessionId, ...body });
+    await fails(BAYU, `select public.submit_feedback($1)`, [fb({ rating: null, message: '  ' })], 'empty_feedback');
+    await as(BAYU, `select public.submit_feedback($1)`, [fb({ rating: 4, message: 'Scores lagged once', contact: 'wa 0812' })]);
+    for (let i = 0; i < 4; i++) await as(BAYU, `select public.submit_feedback($1)`, [fb({ rating: 5, message: '' })]);
+    await fails(BAYU, `select public.submit_feedback($1)`, [fb({ rating: 5 })], 'too_much_feedback');
+    const rows = await as<{ rating: number; message: string | null; session_id: string; device_hash: string }>(
+      HOST, `select rating, message, session_id, device_hash from public.feedback order by id`);
+    expect(rows).toHaveLength(5);
+    expect(rows[0]).toMatchObject({ rating: 4, message: 'Scores lagged once', session_id: sessionId });
+    expect(rows[1]!.message).toBeNull();
+    expect(rows[0]!.device_hash).not.toContain(BAYU);
+  });
+
   it('only members can read the session (row level security)', async () => {
     await as(STRANGER, `set role authenticated`);
     const none = await as(STRANGER, `select count(*)::int as n from public.session_events where session_id = $1`, [sessionId]);
     expect(none[0]).toEqual({ n: 0 });
     const counters = await as(STRANGER, `select count(*)::int as n from public.usage_events`);
     expect(counters[0]).toEqual({ n: 0 });
+    const feedback = await as(STRANGER, `select count(*)::int as n from public.feedback`);
+    expect(feedback[0]).toEqual({ n: 0 });
     const some = await as<{ n: number }>(SARI, `select count(*)::int as n from public.session_events where session_id = $1`, [sessionId]);
     expect(some[0]!.n).toBeGreaterThan(5);
     await db.exec(`reset role`);

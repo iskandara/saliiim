@@ -22,6 +22,17 @@ export interface SessionFeed {
 }
 
 /** Anonymous product counters for the PRD's success metrics. No device or person is stored with them. */
+/** What the feedback form sends. A rating or a message is required. */
+export interface FeedbackInput {
+  rating: number | null;
+  kind: 'bug' | 'idea' | 'other';
+  message: string;
+  contact: string;
+  source: 'summary' | 'page';
+  lang: 'en' | 'jksl';
+  sessionId: string | null;
+}
+
 export type MetricName = 'app_installed' | 'sticker_downloaded' | 'public_link_copied' | 'host_link_copied' | 'session_repeated' | 'link_pasted';
 
 /**
@@ -45,6 +56,7 @@ export interface Backend {
   subscribe(sessionId: string, cb: (feed: SessionFeed) => void): () => void;
   /** Fire and forget: a failed count never interrupts the user. */
   track(name: MetricName, sessionId?: string | null): void;
+  sendFeedback(input: FeedbackInput): Promise<void>;
 }
 
 export class BackendError extends Error {

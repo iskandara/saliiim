@@ -6,7 +6,7 @@
  */
 import { canAppend, reduceSession, roleOf, type CourtLock, type EventBody, type SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
-import { BackendError, newId, type Backend, type Created, type LockResult, type SessionFeed } from './backend';
+import { BackendError, newId, type Backend, type Created, type FeedbackInput, type LockResult, type SessionFeed } from './backend';
 
 interface Stored {
   id: string;
@@ -162,6 +162,18 @@ export class LocalBackend implements Backend {
 
   track() {
     // Demo mode keeps no metrics.
+  }
+
+  async sendFeedback(input: FeedbackInput) {
+    // Demo mode keeps feedback in this browser only.
+    try {
+      const key = 'saliiim:local:feedback';
+      const list = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[];
+      list.push({ ...input, at: new Date().toISOString() });
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch {
+      /* storage blocked: nothing to keep */
+    }
   }
 
   subscribe(sessionId: string, cb: (feed: SessionFeed) => void) {

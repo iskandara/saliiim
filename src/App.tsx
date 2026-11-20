@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-dom';
 import { PrefsProvider, useT } from './i18n';
 import { Board } from './screens/Board';
+import { FeedbackPage } from './screens/Feedback';
 import { Home } from './screens/Home';
 import { HostLink, HostLive, HostScorer, HostStandings, HostSummary } from './screens/HostPages';
 import { Players } from './screens/Players';
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Home /> },
       { path: '/new', element: <Setup /> },
+      { path: '/feedback', element: <FeedbackPage /> },
       { path: '/s/:id', element: <Board /> },
       { path: '/s/:id/players', element: <Players /> },
       { path: '/s/:id/roster', element: <Roster /> },

@@ -7,7 +7,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { CourtLock, EventBody, SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
 import { captchaToken as getCaptchaToken } from './turnstile';
-import { BackendError, type Backend, type Created, type LockResult, type MetricName, type SessionFeed } from './backend';
+import { BackendError, type Backend, type Created, type FeedbackInput, type LockResult, type MetricName, type SessionFeed } from './backend';
 
 interface EventRow {
   id: number;
@@ -175,6 +175,10 @@ export class SupabaseBackend implements Backend {
     } finally {
       this.flushing = false;
     }
+  }
+
+  async sendFeedback(input: FeedbackInput) {
+    await this.rpc('submit_feedback', { p: input });
   }
 
   track(name: MetricName, sessionId?: string | null) {

@@ -118,6 +118,10 @@ export function Home() {
           {t('repeat_last')}
         </Btn>
       )}
+      <Link className="feedback-link" to="/feedback">
+        <Icon name="edit" size={16} />
+        <span>{t('fb_link')}</span>
+      </Link>
     </Page>
   );
 }
