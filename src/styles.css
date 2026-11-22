@@ -4,8 +4,8 @@
   "simple" (light cards, quiet type) for forms and lists.
 */
 :root {
-  --bg: #f3f4ee;
-  --card: #fdfdf8;
+  --bg: #f8f9f4;
+  --card: #fefefb;
   --ink: #11241a;
   --muted: #55625a;
   --border: rgba(17, 36, 26, 0.12);

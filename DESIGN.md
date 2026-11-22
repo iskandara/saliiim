@@ -37,7 +37,7 @@ Dial: ENERGY 3 / RHYTHM 2 / MOTION 2
 | `--court` | #4357cc | #2f3f9e | Court register surfaces (white text 6.05:1 / 9.03:1) |
 | `--ball` | #d7f13b | #d7f13b | The one accent: primary pill, active tab, selection, the winner |
 | `--clay` | #7a2d1b | #3f180e | Backdrop only, from 760px |
-| `--bg` / `--card` | #f3f4ee / #fdfdf8 | #0d1511 / #17211c | Simple register |
+| `--bg` / `--card` | #f8f9f4 / #fefefb | #0d1511 / #17211c | Simple register |
 | `--ink` / `--muted` | #11241a / #55625a | #eef2ea / #a3b0a7 | Text (muted 5.79:1 light, 8.23:1 dark) |
 | `--danger` | #b3261e | #ff8a80 | LIVE and destructive actions |
 
