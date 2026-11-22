@@ -428,6 +428,10 @@ export const en = {
   claimed_toast: 'This session\'s results are on your profile now.',
   your_sessions: 'Your sessions',
   role_cohost: 'Co-host',
+  privacy: 'Privacy policy',
+  terms: 'Terms of service',
+  legal: 'Legal',
+  si_agree: 'By signing in, you agree to the {terms} and the {privacy}.',
 };
 
 export type Key = keyof typeof en;
@@ -861,4 +865,8 @@ export const jksl: Record<Key, string> = {
   claimed_toast: 'Hasil sesi ini udah masuk ke profil lo.',
   your_sessions: 'Sesi lo',
   role_cohost: 'Co-host',
+  privacy: 'Kebijakan privasi',
+  terms: 'Ketentuan layanan',
+  legal: 'Legal',
+  si_agree: 'Dengan masuk, lo setuju sama {terms} dan {privacy}.',
 };

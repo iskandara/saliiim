@@ -7,6 +7,7 @@ import { Welcome } from './screens/Welcome';
 import { AccountProvider, useAccount } from './state/account';
 import { SignInSheet } from './ui/account';
 import { Home } from './screens/Home';
+import { PrivacyPage, TermsPage } from './screens/Legal';
 import { HostLink, HostLive, HostScorer, HostStandings, HostSummary } from './screens/HostPages';
 import { Players } from './screens/Players';
 import { PublicHome, PublicLive, PublicScorer, PublicTV } from './screens/Public';
@@ -76,6 +77,8 @@ const router = createBrowserRouter([
       { path: '/new', element: <Setup /> },
       { path: '/feedback', element: <FeedbackPage /> },
       { path: '/welcome', element: <Welcome /> },
+      { path: '/privacy', element: <PrivacyPage /> },
+      { path: '/terms', element: <TermsPage /> },
       { path: '/s/:id', element: <Board /> },
       { path: '/s/:id/players', element: <Players /> },
       { path: '/s/:id/roster', element: <Roster /> },

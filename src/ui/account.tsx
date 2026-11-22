@@ -167,6 +167,23 @@ export function SignInSheet() {
       )}
       {backend.mode === 'local' && <p className="small muted">{t('si_demo', { code: DEMO_CODE })}</p>}
       <p className="small muted">{t('si_guests')}</p>
+      <p className="small muted">
+        {t('si_agree', { terms: '\u0001', privacy: '\u0002' })
+          .split(/([\u0001\u0002])/)
+          .map((part, i) =>
+            part === '\u0001' ? (
+              <Link key={i} to="/terms" onClick={closeSignIn}>
+                {t('terms')}
+              </Link>
+            ) : part === '\u0002' ? (
+              <Link key={i} to="/privacy" onClick={closeSignIn}>
+                {t('privacy')}
+              </Link>
+            ) : (
+              part
+            ),
+          )}
+      </p>
     </Sheet>
   );
 }
