@@ -4,6 +4,7 @@ import { PrefsProvider, useT } from './i18n';
 import { Board } from './screens/Board';
 import { FeedbackPage } from './screens/Feedback';
 import { Home } from './screens/Home';
+import { PrivacyPage, TermsPage } from './screens/Legal';
 import { HostLink, HostLive, HostScorer, HostStandings, HostSummary } from './screens/HostPages';
 import { Players } from './screens/Players';
 import { PublicHome, PublicLive, PublicScorer, PublicTV } from './screens/Public';
@@ -59,6 +60,8 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/new', element: <Setup /> },
       { path: '/feedback', element: <FeedbackPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
+      { path: '/terms', element: <TermsPage /> },
       { path: '/s/:id', element: <Board /> },
       { path: '/s/:id/players', element: <Players /> },
       { path: '/s/:id/roster', element: <Roster /> },

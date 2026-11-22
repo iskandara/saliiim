@@ -373,6 +373,9 @@ export const en = {
   fb_error: "Couldn't send it ({code}). Try again in a moment.",
   fb_too_many: "That's a lot of feedback for one hour. Try again later.",
   fb_privacy: "We save your rating, message, contact (if you add one), the app language and the session. Your name isn't attached.",
+  privacy: 'Privacy policy',
+  terms: 'Terms of service',
+  legal: 'Legal',
 };
 
 export type Key = keyof typeof en;
@@ -751,4 +754,7 @@ export const jksl: Record<Key, string> = {
   fb_error: 'Gagal kirim ({code}). Coba lagi bentar ya.',
   fb_too_many: 'Udah banyak banget feedback sejam ini. Coba lagi nanti ya.',
   fb_privacy: 'Yang disimpan: rating, pesan, kontak (kalau diisi), bahasa app, dan sesinya. Nama lo nggak ikut.',
+  privacy: 'Kebijakan privasi',
+  terms: 'Ketentuan layanan',
+  legal: 'Legal',
 };

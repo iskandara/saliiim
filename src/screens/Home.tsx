@@ -118,10 +118,17 @@ export function Home() {
           {t('repeat_last')}
         </Btn>
       )}
-      <Link className="feedback-link" to="/feedback">
-        <Icon name="edit" size={16} />
-        <span>{t('fb_link')}</span>
-      </Link>
+      <footer className="home-foot">
+        <Link className="feedback-link" to="/feedback">
+          <Icon name="edit" size={16} />
+          <span>{t('fb_link')}</span>
+        </Link>
+        <nav className="legal-links" aria-label={t('legal')}>
+          <Link to="/privacy">{t('privacy')}</Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/terms">{t('terms')}</Link>
+        </nav>
+      </footer>
     </Page>
   );
 }

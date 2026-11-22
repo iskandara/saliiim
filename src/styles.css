@@ -1868,3 +1868,46 @@ section > h3 {
 .next-row.first .link-btn:focus-visible {
   outline-color: var(--ball);
 }
+
+/* Privacy policy and terms: plain reading pages. */
+.legal {
+  display: grid;
+  gap: 10px;
+  max-width: 68ch;
+}
+.legal h1 {
+  margin-bottom: 0;
+}
+.legal h2 {
+  font-size: 1.1rem;
+  margin: 18px 0 4px;
+}
+.legal p,
+.legal li {
+  line-height: 1.55;
+}
+.legal ul {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+}
+.home-foot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+.legal-links {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.legal-links a {
+  color: var(--muted);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-underline-offset: 3px;
+}
