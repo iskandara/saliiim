@@ -1,13 +1,21 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { SessionState } from '../core/session';
 import { useT } from '../i18n';
 import { Btn, Icon, Seg, Sheet } from '../ui/kit';
 import { CourtsList, LiveBadge, NextUp, Notices, ProgressLine, StandingsTable } from '../ui/session-ui';
 
 /** What spectators see: courts and standings. Side by side on wide screens, a switch on phones. */
-export function LiveView({ s, slug, ownCard = false, tv = false }: { s: SessionState; slug: string; ownCard?: boolean; tv?: boolean }) {
+export function LiveView({ s, slug, ownCard = false, tv = false, exitTo }: {
+  s: SessionState;
+  slug: string;
+  ownCard?: boolean;
+  tv?: boolean;
+  /** Where "Exit TV mode" goes; defaults to the public live view. */
+  exitTo?: string;
+}) {
   const t = useT();
+  const { pathname } = useLocation();
   const [tab, setTab] = useState<'courts' | 'standings'>('courts');
   const [leaving, setLeaving] = useState(false);
   return (
@@ -34,12 +42,13 @@ export function LiveView({ s, slug, ownCard = false, tv = false }: { s: SessionS
         </div>
       </div>
       {tv && (
-        <Link className="tv-exit" to={`/p/${slug}/live`}>
+        <Link className="tv-exit" to={exitTo ?? `/p/${slug}/live`}>
           {t('exit_tv')}
         </Link>
       )}
       {!tv && (
-        <Link className="btn ghost" to={`/p/${slug}/tv`}>
+        // Remember where TV mode was opened from, so Exit comes back to the same page and its menu.
+        <Link className="btn ghost" to={`/p/${slug}/tv`} state={{ back: pathname }}>
           <Icon name="tv" />
           <span>{t('tv_mode')}</span>
         </Link>

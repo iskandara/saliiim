@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   canConfirm, isHostRole, canScore, liveMatchOnCourt, partnerOf, pendingResult, playerStatus, sideName, unitForPlayer,
   type MatchState, type SessionState,
@@ -84,9 +84,18 @@ export function PublicLive() {
 }
 
 export function PublicTV() {
+  const back = (useLocation().state as { back?: string } | null)?.back;
   return (
     <PublicGate wide header={() => 'none'}>
-      {(ctx, slug) => <LiveView s={ctx.state} slug={slug} tv />}
+      {(ctx, slug) => (
+        <LiveView
+          s={ctx.state}
+          slug={slug}
+          tv
+          // Back to the page TV mode was opened from; a host phone opening TV directly goes to its own live tab.
+          exitTo={back?.startsWith('/') ? back : isHostRole(ctx.role) && ctx.sessionId ? `/s/${ctx.sessionId}/live` : undefined}
+        />
+      )}
     </PublicGate>
   );
 }
