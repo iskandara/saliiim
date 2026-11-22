@@ -16,6 +16,9 @@ export function Board() {
   );
 }
 
+/** Whether the Settings group on the board was left open, per phone. */
+const SETTINGS_KEY = 'saliiim:board-settings-open';
+
 const dismissedKey = (id: string) => `saliiim:hostlink-dismissed:${id}`;
 
 export function useRunner() {
@@ -48,6 +51,13 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
   const [entering, setEntering] = useState<MatchState | null>(null);
   const [handing, setHanding] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(() => {
+    try {
+      return localStorage.getItem(SETTINGS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   if (s.status === 'draft') return <Navigate to={`/s/${id}/players`} replace />;
   if (s.status === 'closed') return <Navigate to={`/s/${id}/summary`} replace />;
@@ -215,8 +225,25 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
             </div>
           </section>
 
-          <section>
-            <h3>{t('manage')}</h3>
+          <details
+            className="fold settings"
+            open={settingsOpen}
+            onToggle={(e) => {
+              const open = (e.currentTarget as HTMLDetailsElement).open;
+              setSettingsOpen(open);
+              try {
+                localStorage.setItem(SETTINGS_KEY, open ? '1' : '0');
+              } catch {
+                /* ignore */
+              }
+            }}
+          >
+            <summary>
+              <h3>
+                <Icon name="gear" size={18} />
+                {t('manage')}
+              </h3>
+            </summary>
             <div className="stack tight">
               <Link className="btn ghost" to={`/s/${id}/roster`} viewTransition>
                 <Icon name="users" />
@@ -231,15 +258,13 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
                   {t('hand_btn')}
                 </Btn>
               )}
+              <div className="end-session">
+                <Btn kind="dark" icon="lock" onClick={() => setClosing(true)}>
+                  {t('close_btn')}
+                </Btn>
+              </div>
             </div>
-          </section>
-
-          <section className="end-session">
-            <h3>{t('end_session')}</h3>
-            <Btn kind="dark" icon="lock" onClick={() => setClosing(true)}>
-              {t('close_btn')}
-            </Btn>
-          </section>
+          </details>
         </aside>
       </div>
 

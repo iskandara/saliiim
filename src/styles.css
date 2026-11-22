@@ -1627,7 +1627,8 @@ section > h3 {
 }
 
 /* Skipped matches fold away under their heading. */
-.skipped > summary {
+.skipped > summary,
+.fold > summary {
   list-style: none;
   cursor: pointer;
   display: flex;
@@ -1636,13 +1637,16 @@ section > h3 {
   gap: 8px;
   min-height: 44px;
 }
-.skipped > summary::-webkit-details-marker {
+.skipped > summary::-webkit-details-marker,
+.fold > summary::-webkit-details-marker {
   display: none;
 }
-.skipped > summary h3 {
+.skipped > summary h3,
+.fold > summary h3 {
   margin: 0;
 }
-.skipped > summary::after {
+.skipped > summary::after,
+.fold > summary::after {
   content: '';
   width: 10px;
   height: 10px;
@@ -1651,10 +1655,12 @@ section > h3 {
   transform: rotate(45deg) translate(-2px, -2px);
   transition: transform 0.15s;
 }
-.skipped[open] > summary::after {
+.skipped[open] > summary::after,
+.fold[open] > summary::after {
   transform: rotate(-135deg) translate(-2px, -2px);
 }
-.skipped > summary:focus-visible {
+.skipped > summary:focus-visible,
+.fold > summary:focus-visible {
   outline: 3px solid var(--focus, var(--ball));
   outline-offset: 2px;
   border-radius: 8px;
@@ -1777,4 +1783,88 @@ section > h3 {
   color: var(--muted);
   font-weight: 700;
   text-underline-offset: 3px;
+}
+
+/* Settings on the board: folded by default; Close session sits last, set apart. */
+.settings > summary h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings > .stack {
+  padding-top: 8px;
+}
+.settings .end-session {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Next up: numbered, so the order reads at a glance; the next match sits on the court colour. */
+.next-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.next-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-card);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.next-no {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg);
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.next-names {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.next-names b {
+  font-weight: 800;
+}
+.next-names .vs {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.next-row.first {
+  min-height: 68px;
+  background: var(--court);
+  color: var(--court-ink);
+  border-color: transparent;
+}
+.next-row.first .next-no {
+  width: 34px;
+  height: 34px;
+  background: var(--ball);
+  color: var(--ball-ink);
+}
+.next-row.first .next-names {
+  font-size: 1.14rem;
+}
+.next-row.first .vs {
+  color: inherit;
+  opacity: 0.78;
+}
+.next-row.first .link-btn:focus-visible {
+  outline-color: var(--ball);
 }

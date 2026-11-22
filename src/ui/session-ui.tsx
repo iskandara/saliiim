@@ -77,18 +77,21 @@ export function NextUp({ s, render }: { s: SessionState; render?: (m: MatchState
   const q = queue(s).slice(0, 3);
   if (!q.length) return null;
   return (
-    <section>
+    <section className="next-up">
       <h3>{t('next_up')}</h3>
-      <ul className="list">
-        {q.map((m) => (
-          <li key={m.id} className="row">
-            <span className="grow">
-              {sideName(s, m.a)} <span className="muted">{t('vs')}</span> {sideName(s, m.b)}
+      <ol className="next-list">
+        {q.map((m, i) => (
+          <li key={m.id} className={`next-row ${i === 0 ? 'first' : ''}`}>
+            <span className="next-no" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span className="next-names">
+              <b>{sideName(s, m.a)}</b> <span className="vs">{t('vs')}</span> <b>{sideName(s, m.b)}</b>
             </span>
             {render?.(m)}
           </li>
         ))}
-      </ul>
+      </ol>
     </section>
   );
 }
