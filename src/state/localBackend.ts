@@ -6,7 +6,28 @@
  */
 import { canAppend, reduceSession, roleOf, type CourtLock, type EventBody, type SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
-import { BackendError, newId, type Backend, type Created, type FeedbackInput, type LockResult, type SessionFeed } from './backend';
+import {
+  BackendError, newId, type Account, type Backend, type Created, type FeedbackInput, type LockResult, type MySession, type Profile,
+  type ProfileInput, type SessionFeed, type StartLevel,
+} from './backend';
+
+// Demo accounts: each tab is its own phone, so accounts are kept per device id.
+const ACCOUNTS = 'saliiim:local:accounts';
+const PROFILES = 'saliiim:local:profiles';
+/** The code every demo email "receives". */
+export const DEMO_CODE = '123456';
+const START: Record<StartLevel, number> = { beginner: 800, intermediate: 1200, advanced: 1600, competitive: 2000 };
+
+function readMap<T>(key: string): Record<string, T> {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+function writeMap<T>(key: string, value: Record<string, T>) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
 
 interface Stored {
   id: string;
@@ -64,6 +85,7 @@ export class LocalBackend implements Backend {
   }
 
   async createSession(settings: Settings, hostPlayer: { id: string; name: string }): Promise<Created> {
+    if (!(await this.account())) throw new BackendError('sign_in_required');
     const all = load();
     const s: Stored = { id: newId(), slug: newId(), hostKey: newId() + newId(), events: [], locks: [] };
     emit(s, { type: 'create', payload: { settings, hostPlayer, slug: s.slug } }, device());
@@ -162,6 +184,77 @@ export class LocalBackend implements Backend {
 
   track() {
     // Demo mode keeps no metrics.
+  }
+
+  async account(): Promise<Account | null> {
+    return readMap<Account>(ACCOUNTS)[device()] ?? null;
+  }
+
+  private setAccount(a: Account) {
+    const all = readMap<Account>(ACCOUNTS);
+    all[device()] = a;
+    writeMap(ACCOUNTS, all);
+  }
+
+  async signInWithGoogle(_transferSessionId?: string | null, returnTo?: string) {
+    // Stands in for the Google page: the tab becomes an account and reloads, as after the real redirect.
+    this.setAccount({ id: device(), email: 'demo@example.com', name: 'Demo Player', avatarUrl: null });
+    if (returnTo) window.location.assign(returnTo);
+    else window.location.reload();
+  }
+
+  async sendEmailCode(email: string) {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new BackendError('bad_email');
+  }
+
+  async verifyEmailCode(email: string, code: string) {
+    if (code.trim() !== DEMO_CODE) throw new BackendError('bad_code');
+    this.setAccount({ id: device(), email, name: email.split('@')[0]!, avatarUrl: null });
+  }
+
+  async finishSignIn() {
+    // The demo account keeps the tab's own id, so nothing has to move.
+    return null;
+  }
+
+  async signOut() {
+    const all = readMap<Account>(ACCOUNTS);
+    delete all[device()];
+    writeMap(ACCOUNTS, all);
+  }
+
+  async myProfile() {
+    return readMap<Profile>(PROFILES)[device()] ?? null;
+  }
+
+  async saveProfile(input: ProfileInput) {
+    if (!(await this.account())) throw new BackendError('sign_in_required');
+    const all = readMap<Profile>(PROFILES);
+    const prev = all[device()];
+    const startLevel = input.startLevel ?? prev?.startLevel ?? 'intermediate';
+    const fresh = !prev || prev.ratedMatches === 0;
+    const blank: Profile = {
+      id: device(), name: '', photoUrl: null, city: null, hand: null, formatPref: null, isPublic: true, startLevel,
+      showBasics: true, showStats: true, showH2h: true, showHistory: true, ratedMatches: 0, rating: START[startLevel],
+    };
+    const next: Profile = {
+      ...blank, ...prev, ...input, name: input.name.trim(),
+      startLevel: fresh ? startLevel : prev!.startLevel,
+      rating: fresh ? START[startLevel] : prev!.rating,
+    };
+    all[device()] = next;
+    writeMap(PROFILES, all);
+    return next;
+  }
+
+  async mySessions(): Promise<MySession[]> {
+    if (!(await this.account())) return [];
+    const me = device();
+    return Object.values(load())
+      .map((s) => ({ s, st: reduceSession(s.events) }))
+      .filter(({ st }) => roleOf(st, me) !== 'spectator')
+      .map(({ s, st }) => ({ id: s.id, slug: s.slug, name: st.settings.name, role: roleOf(st, me), status: st.status === 'empty' ? 'draft' : st.status, createdAt: st.createdAt ?? '' }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   async sendFeedback(input: FeedbackInput) {

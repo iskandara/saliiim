@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { Link } from 'react-router-dom';
 import { usePrefs, useT } from '../i18n';
 import { backend } from '../state';
+import { AccountButton } from './account';
 
 // Icons are decorative: every button also carries a text label.
 // Square caps and a heavy stroke match the 2px borders and the heavy display type.
@@ -12,6 +13,7 @@ const paths: Record<string, string> = {
   skip: 'M5 4v16l10-8zM19 4v16',
   undo: 'M9 15L4 10l5-5M4 10h11a5 5 0 0 1 0 10h-4',
   clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
   users: 'M3 21v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M17 14a4 4 0 0 1 4 4v3M15 4.3a3.5 3.5 0 0 1 0 6.4',
   trophy: 'M8 21h8M12 16v5M7 3h10v6a5 5 0 0 1-10 0zM17 5h3v3a3 3 0 0 1-3 3M7 5H4v3a3 3 0 0 0 3 3',
@@ -103,6 +105,8 @@ export function Ball({ size = 28, tone = 'lime' }: { size?: number; tone?: 'lime
   );
 }
 
+const narrow = () => window.matchMedia?.('(max-width: 360px)').matches ?? false;
+
 /** Green header bar: wordmark and the theme/language pill. One size for every screen. */
 export function AppHeader() {
   const { t, lang, setLang, theme, setTheme } = usePrefs();
@@ -114,14 +118,16 @@ export function AppHeader() {
         <img src="/brand/logo-reverse-360.webp" srcSet="/brand/logo-reverse-360.webp 360w, /brand/logo-reverse-720.webp 720w" sizes="152px" width="151" height="52" alt="Saliiim!" />
       </Link>
       <div className="prefs">
+        <AccountButton />
         <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')} title={t('theme')}>
           <Icon name={dark ? 'sun' : 'moon'} size={18} />
         </button>
         <div className="lang" role="group" aria-label={t('language')}>
-          <button aria-pressed={lang === 'en'} onClick={() => setLang('en')}>
+          {/* On the narrowest phones only the current language shows, and tapping it switches. */}
+          <button aria-pressed={lang === 'en'} onClick={() => setLang(lang === 'en' && narrow() ? 'jksl' : 'en')}>
             EN
           </button>
-          <button aria-pressed={lang === 'jksl'} onClick={() => setLang('jksl')}>
+          <button aria-pressed={lang === 'jksl'} onClick={() => setLang(lang === 'jksl' && narrow() ? 'en' : 'jksl')}>
             JKSL
           </button>
         </div>

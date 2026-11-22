@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_SETTINGS, MAX_COURTS, type Rules, type Settings } from '../core/types';
 import { useT } from '../i18n';
 import { backend, lastRoster, remember } from '../state';
 import { newId } from '../state/backend';
+import { useAccount } from '../state/account';
 import { errorCode } from '../state/useSession';
 import { Btn, Field, Icon, Page, Seg, Sheet, Stepper, useToast } from '../ui/kit';
 
@@ -29,6 +30,12 @@ export function Setup() {
   const [tried, setTried] = useState(false);
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
+  const acct = useAccount();
+  // The host's name comes from their profile; they can still change it for this session.
+  const profileName = acct.profile?.name;
+  useEffect(() => {
+    if (profileName) setS((x) => (x.hostName ? x : { ...x, hostName: profileName }));
+  }, [profileName]);
 
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setS((x) => ({ ...x, [k]: v }));
   const setRule = <K extends keyof Rules>(k: K, v: Rules[K]) => setS((x) => ({ ...x, rules: { ...x.rules, [k]: v } }));
@@ -87,6 +94,22 @@ export function Setup() {
     [t('rounds'), s.maxRounds ? String(s.maxRounds) : t('rounds_auto')],
     [t('who_scores'), t(s.scorerMode === 'host' ? 'host_only' : 'players_on_court')],
   ];
+
+  if (!acct.ready) return <Page header="full">{t('loading')}</Page>;
+  if (!acct.account) {
+    return (
+      <Page header="full">
+        <h1>{t('new_session')}</h1>
+        <section className="court-surface hero">
+          <h2>{t('host_gate_title')}</h2>
+          <p>{t('host_gate_body')}</p>
+          <Btn kind="primary" icon="user" onClick={() => acct.signIn({ reason: 'host', next: `/new${repeat ? '?repeat=1' : ''}` })}>
+            {t('sign_in')}
+          </Btn>
+        </section>
+      </Page>
+    );
+  }
 
   return (
     <Page header="full">

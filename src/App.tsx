@@ -3,6 +3,9 @@ import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-
 import { PrefsProvider, useT } from './i18n';
 import { Board } from './screens/Board';
 import { FeedbackPage } from './screens/Feedback';
+import { Welcome } from './screens/Welcome';
+import { AccountProvider, useAccount } from './state/account';
+import { SignInSheet } from './ui/account';
 import { Home } from './screens/Home';
 import { HostLink, HostLive, HostScorer, HostStandings, HostSummary } from './screens/HostPages';
 import { Players } from './screens/Players';
@@ -45,11 +48,24 @@ function NotFound() {
 
 function Shell() {
   return (
-    <>
+    <AccountProvider>
       <DroppedListener />
+      <ClaimedToast />
       <Outlet />
-    </>
+      <SignInSheet />
+    </AccountProvider>
   );
+}
+
+/** One message when a guest's session results have just moved to their new account. */
+function ClaimedToast() {
+  const { claimed } = useAccount();
+  const toast = useToast();
+  const t = useT();
+  useEffect(() => {
+    if (claimed) toast(t('claimed_toast'));
+  }, [claimed]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 const router = createBrowserRouter([
@@ -59,6 +75,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/new', element: <Setup /> },
       { path: '/feedback', element: <FeedbackPage /> },
+      { path: '/welcome', element: <Welcome /> },
       { path: '/s/:id', element: <Board /> },
       { path: '/s/:id/players', element: <Players /> },
       { path: '/s/:id/roster', element: <Roster /> },

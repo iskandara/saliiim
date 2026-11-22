@@ -20,8 +20,12 @@ let sessionId: string;
 let slug: string;
 let hostKey: string;
 
+/** Phones signed in with Google or email; everyone else is an anonymous guest. */
+const ACCOUNTS = new Set<string>();
+
 async function as<T = Record<string, unknown>>(device: string, sql: string, params: unknown[] = []) {
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [device]);
+  await db.query(`select set_config('request.jwt.claim.anon', $1, false)`, [ACCOUNTS.has(device) ? 'false' : 'true']);
   return (await db.query<T>(sql, params)).rows;
 }
 
@@ -38,6 +42,8 @@ beforeAll(async () => {
     create schema auth;
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    create function auth.jwt() returns jsonb language sql stable as
+      $$ select jsonb_build_object('is_anonymous', coalesce(current_setting('request.jwt.claim.anon', true), 'true') <> 'false') $$;
     grant usage on schema auth to authenticated;
   `);
   await db.exec(readFileSync('supabase/migrations/0001_init.sql', 'utf8'));
@@ -45,10 +51,18 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/0003_metrics.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0004_open_host_postpone.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0005_feedback.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0006_accounts.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
 describe('supabase migration', () => {
+  it('only an account can host', async () => {
+    const payload = { settings: { ...DEFAULT_SETTINGS, name: 'Guest try' }, hostPlayer: { id: 'g', name: 'G' } };
+    await fails(HOST, `select public.create_session($1)`, [JSON.stringify(payload)], 'sign_in_required');
+    ACCOUNTS.add(HOST);
+    ACCOUNTS.add(OTHER_PHONE);
+  });
+
   it('host creates a session', async () => {
     const payload = { settings: { ...DEFAULT_SETTINGS, name: 'Saturday', hostName: 'Dimas', format: 'singles' }, hostPlayer: { id: 'dimas', name: 'Dimas' } };
     const [row] = await as<{ r: { id: string; slug: string; hostKey: string } }>(HOST, `select public.create_session($1) as r`, [JSON.stringify(payload)]);
@@ -167,6 +181,45 @@ describe('supabase migration', () => {
     await as(SARI, `select public.append_event($1, 'postpone_match', $2)`, [sessionId, JSON.stringify({ matchId: target.id })]);
     await fails(SARI, `select public.append_event($1, 'promote', '{"playerId":"bayu"}')`, [sessionId], 'host_only');
     await fails(STRANGER, `select public.append_event($1, 'postpone_match', '{}')`, [sessionId], 'not_member');
+  });
+
+  it('accounts: profile, auto-link on join, and a guest taking their player along on sign-up', async () => {
+    const GUEST = '00000000-0000-4000-8000-000000000010';
+    const ACCOUNT = '00000000-0000-4000-8000-000000000011';
+    const SIGNED = '00000000-0000-4000-8000-000000000012';
+    await fails(GUEST, `select public.save_profile($1)`, [JSON.stringify({ name: 'G' })], 'sign_in_required');
+    ACCOUNTS.add(SIGNED);
+    const [prof] = await as<{ p: { rating: number; start_level: string } }>(SIGNED, `select public.save_profile($1) as p`, [JSON.stringify({ name: 'Rina', startLevel: 'advanced' })]);
+    expect(prof!.p).toMatchObject({ rating: 1600, start_level: 'advanced' });
+
+    const payload = { settings: { ...DEFAULT_SETTINGS, name: 'Claim test', format: 'singles' }, hostPlayer: { id: 'h2', name: 'Dimas' } };
+    const [row] = await as<{ r: { id: string; slug: string } }>(HOST, `select public.create_session($1) as r`, [JSON.stringify(payload)]);
+    const sid = row!.r.id;
+    for (const [dev, id, name] of [[GUEST, 'guest1', 'Tari'], [SIGNED, 'rina', 'Rina']] as const) {
+      await as(dev, `select public.open_public($1)`, [row!.r.slug]);
+      await as(dev, `select public.join_session($1, $2, $3)`, [sid, id, name]);
+    }
+    const links = async () => (await as<{ player_id: string; user_id: string }>(HOST, `select player_id, user_id from public.player_links where session_id = $1 order by player_id`, [sid]));
+    expect((await links()).map((l) => l.player_id)).toEqual(['h2', 'rina']);
+
+    // The guest makes a ticket, then signs in to an account that already existed on another phone.
+    const [tk] = await as<{ t: string }>(GUEST, `select public.start_transfer($1) as t`, [sid]);
+    await fails(GUEST, `select public.finish_transfer($1)`, [tk!.t], 'sign_in_required');
+    ACCOUNTS.add(ACCOUNT);
+    await as(ACCOUNT, `select public.finish_transfer($1)`, [tk!.t]);
+    await fails(ACCOUNT, `select public.finish_transfer($1)`, [tk!.t], 'transfer_expired');
+    expect(await links()).toContainEqual({ player_id: 'guest1', user_id: ACCOUNT });
+    const roles = await as<{ device_id: string; player_id: string }>(HOST, `select device_id, player_id from public.session_roles where session_id = $1 and player_id = 'guest1'`, [sid]);
+    expect(roles).toEqual([{ device_id: ACCOUNT, player_id: 'guest1' }]);
+
+    const rows = await as<{ id: number; type: string; payload: Record<string, unknown>; actor: string | null; created_at: Date }>(
+      HOST, `select id, type, payload, actor, created_at from public.session_events where session_id = $1 order by id`, [sid]);
+    const s = reduceSession(rows.map((r) => ({ seq: Number(r.id), type: r.type, payload: r.payload, actor: r.actor, at: r.created_at.toISOString() }) as SessionEvent));
+    expect(s.ignored).toEqual([]);
+    expect(s.players.find((p) => p.id === 'guest1')!.deviceId).toBe(ACCOUNT);
+
+    const [mine] = await as<{ n: number }>(ACCOUNT, `select count(*)::int as n from public.my_sessions() where id = $1`, [sid]);
+    expect(mine!.n).toBe(1);
   });
 
   it('auto-close ends idle sessions and locks them', async () => {

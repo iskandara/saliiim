@@ -7,7 +7,35 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { CourtLock, EventBody, SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
 import { captchaToken as getCaptchaToken } from './turnstile';
-import { BackendError, type Backend, type Created, type FeedbackInput, type LockResult, type MetricName, type SessionFeed } from './backend';
+import {
+  BackendError, type Account, type Backend, type Created, type FeedbackInput, type LockResult, type MetricName, type MySession,
+  type Profile, type ProfileInput, type SessionFeed,
+} from './backend';
+
+/** Full address to come back to after sign-in: a path in this app, or the current page. */
+const back = (path?: string) => (path?.startsWith('/') ? window.location.origin + path : window.location.href);
+
+/** A guest-to-account move waiting for sign-in to finish (Google leaves the page and comes back). */
+const PENDING = 'saliiim:pending-transfer';
+
+function toProfile(r: Record<string, unknown>): Profile {
+  return {
+    id: r.id as string,
+    name: r.name as string,
+    photoUrl: (r.photo_url as string) ?? null,
+    city: (r.city as string) ?? null,
+    hand: (r.hand as Profile['hand']) ?? null,
+    formatPref: (r.format_pref as Profile['formatPref']) ?? null,
+    startLevel: r.start_level as Profile['startLevel'],
+    rating: Number(r.rating),
+    ratedMatches: Number(r.rated_matches),
+    isPublic: r.is_public as boolean,
+    showBasics: r.show_basics as boolean,
+    showStats: r.show_stats as boolean,
+    showH2h: r.show_h2h as boolean,
+    showHistory: r.show_history as boolean,
+  };
+}
 
 interface EventRow {
   id: number;
@@ -48,7 +76,7 @@ export class SupabaseBackend implements Backend {
     key: string,
     private captchaKey?: string,
   ) {
-    this.client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
+    this.client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce', detectSessionInUrl: true } });
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => void this.flushAll());
       setInterval(() => void this.flushAll(), 5000);
@@ -175,6 +203,110 @@ export class SupabaseBackend implements Backend {
     } finally {
       this.flushing = false;
     }
+  }
+
+  // Accounts
+
+  async account(): Promise<Account | null> {
+    const { data } = await this.client.auth.getSession();
+    const u = data.session?.user;
+    if (!u || u.is_anonymous) return null;
+    const meta = (u.user_metadata ?? {}) as Record<string, string | undefined>;
+    return {
+      id: u.id,
+      email: u.email ?? null,
+      name: meta.full_name || meta.name || (u.email ? u.email.split('@')[0]! : ''),
+      avatarUrl: meta.avatar_url || meta.picture || null,
+    };
+  }
+
+  /** While still a guest: a one-time ticket that moves this phone's player in that session to the account. */
+  private async prepareTransfer(sessionId?: string | null) {
+    try {
+      localStorage.removeItem(PENDING);
+    } catch {
+      /* ignore */
+    }
+    if (!sessionId || (await this.account())) return;
+    await this.flushAll();
+    const token = await this.rpc<string | null>('start_transfer', { p_session: sessionId });
+    if (!token) return;
+    try {
+      localStorage.setItem(PENDING, JSON.stringify({ token, sessionId, at: Date.now() }));
+    } catch {
+      /* without storage the results stay with the guest */
+    }
+  }
+
+  async signInWithGoogle(transferSessionId?: string | null, returnTo?: string) {
+    await this.prepareTransfer(transferSessionId);
+    const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back(returnTo) } });
+    if (error) throw new BackendError(error.message.includes('provider is not enabled') ? 'google_not_enabled' : 'sign_in_failed');
+  }
+
+  async sendEmailCode(email: string, transferSessionId?: string | null, returnTo?: string) {
+    await this.prepareTransfer(transferSessionId);
+    let captchaToken: string | undefined;
+    try {
+      captchaToken = this.captchaKey ? await getCaptchaToken(this.captchaKey) : undefined;
+    } catch {
+      captchaToken = undefined;
+    }
+    const { error } = await this.client.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true, emailRedirectTo: back(returnTo), captchaToken },
+    });
+    if (error) {
+      const m = error.message.toLowerCase();
+      throw new BackendError(m.includes('rate') ? 'email_rate_limited' : m.includes('invalid') ? 'bad_email' : 'email_failed');
+    }
+  }
+
+  async verifyEmailCode(email: string, code: string) {
+    const { error } = await this.client.auth.verifyOtp({ email, token: code.trim(), type: 'email' });
+    if (error) throw new BackendError(error.message.toLowerCase().includes('expired') ? 'code_expired' : 'bad_code');
+    this.me = null;
+  }
+
+  async finishSignIn(): Promise<string | null> {
+    if (!(await this.account())) return null;
+    let pending: { token: string; sessionId: string } | null = null;
+    try {
+      pending = JSON.parse(localStorage.getItem(PENDING) ?? 'null');
+      localStorage.removeItem(PENDING);
+    } catch {
+      pending = null;
+    }
+    if (!pending) return null;
+    try {
+      this.me = null;
+      await this.rpc('finish_transfer', { p_token: pending.token });
+      return pending.sessionId;
+    } catch {
+      // Expired or already used: the session stays with the guest, nothing else is affected.
+      return null;
+    }
+  }
+
+  async signOut() {
+    await this.client.auth.signOut();
+    this.me = null;
+  }
+
+  async myProfile() {
+    const row = await this.rpc<Record<string, unknown> | null>('my_profile', {});
+    return row ? toProfile(row) : null;
+  }
+
+  async saveProfile(input: ProfileInput) {
+    return toProfile(await this.rpc<Record<string, unknown>>('save_profile', { p: input }));
+  }
+
+  async mySessions(): Promise<MySession[]> {
+    const rows = await this.rpc<Record<string, string>[]>('my_sessions', {});
+    return (rows ?? []).map((r) => ({
+      id: r.id!, slug: r.slug!, name: r.name ?? '', role: r.role as MySession['role'], status: r.status as MySession['status'], createdAt: r.created_at!,
+    }));
   }
 
   async sendFeedback(input: FeedbackInput) {

@@ -99,6 +99,25 @@ The site ships a web app manifest, the 8-bit icon set and a service worker, so p
 
 Cloudflare → **Workers & Pages → saliiim → Settings → Domains & Routes → Add → Custom domain**. Then add the new hostname to the Turnstile widget.
 
+## M2: accounts (setup before merging the m2 branch)
+
+Spec: the "Saliiim M2 Spec" doc. Hosts must sign in from M2, so finish these steps before the
+accounts code goes live, or nobody can start a session.
+
+1. **Google Cloud** (console.cloud.google.com): APIs & Services > OAuth consent screen, set it up as External.
+   Then Credentials > Create credentials > OAuth client ID > Web application. Authorized redirect URI:
+   `https://<your-project>.supabase.co/auth/v1/callback`. Copy the client ID and secret.
+2. **Supabase > Authentication > Sign In / Providers:** turn on Google and paste the ID and secret.
+   Keep Email on and Anonymous sign-ins on.
+3. **Supabase > Authentication > URL Configuration:** Site URL = the app's address; add
+   `https://<app address>/**` to Redirect URLs.
+4. **Supabase > Authentication > Emails:** in both the "Magic Link" and "Confirm signup" templates,
+   add the code line `Your Saliiim code: {{ .Token }}` above the link.
+5. **Email sending (SMTP):** Supabase's built-in email only reaches your own team. Under
+   Authentication > Emails > SMTP Settings, connect a free provider, such as Brevo (300 emails a day,
+   any verified sender address) or Resend (needs a domain you own).
+6. **Supabase SQL Editor:** run `supabase/migrations/0006_accounts.sql`.
+
 ## Project layout
 
 ```

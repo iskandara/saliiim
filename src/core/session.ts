@@ -30,6 +30,8 @@ export type EventBody =
   | { type: 'skip_match'; payload: { matchId: string } }
   | { type: 'unskip_match'; payload: { matchId: string } }
   | { type: 'postpone_match'; payload: { matchId: string } }
+  /** Written by the server only: a guest's player moves to the account they signed in with. */
+  | { type: 'rebind'; payload: { playerId: string; from: string; to: string } }
   | { type: 'point'; payload: { matchId: string; court: number; team: Team } }
   | { type: 'undo'; payload: { matchId: string; court: number } }
   | { type: 'set_server'; payload: { matchId: string; court: number; playerId: string } }
@@ -295,7 +297,8 @@ function leave(s: SessionState, playerId: string, choice: LiveChoice) {
 }
 
 export function applyEvent(s: SessionState, ev: SessionEvent): void {
-  if (s.status === 'closed') fail('closed');
+  // A rebind may follow the close: guests can claim a closed session's results for 7 days.
+  if (s.status === 'closed' && ev.type !== 'rebind') fail('closed');
   if (s.status === 'empty' && ev.type !== 'create') fail('no_session');
   const draft = s.status === 'draft';
   const live = s.status === 'live';
@@ -439,6 +442,17 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       m.status = 'queued';
       m.court = null;
       s.matches = [...s.matches.filter((x) => x !== m), m];
+      break;
+    }
+    case 'rebind': {
+      const { playerId, from, to } = ev.payload;
+      const p = player(s, playerId);
+      if (p.deviceId !== from) fail('not_bound');
+      if (s.players.some((x) => x.deviceId === to && x.id !== playerId && x.status !== 'removed' && x.status !== 'declined')) fail('device_has_player');
+      p.deviceId = to;
+      const swap = (list: string[]) => [...new Set(list.map((d) => (d === from ? to : d)))];
+      s.hostDevices = swap(s.hostDevices);
+      s.cohostDevices = swap(s.cohostDevices);
       break;
     }
     case 'point':

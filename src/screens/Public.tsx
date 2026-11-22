@@ -9,6 +9,7 @@ import { backend, remember } from '../state';
 import { newId } from '../state/backend';
 import { errorCode, useSession, type SessionCtx } from '../state/useSession';
 import { Btn, Field, Icon, Page, useToast, type HeaderSize } from '../ui/kit';
+import { ClaimCard } from '../ui/account';
 import { LoadError } from './HostGate';
 import { CourtsList, LiveBadge, MiniScore, Notices, StandingsTable } from '../ui/session-ui';
 import { LiveView } from './LiveView';
@@ -335,6 +336,7 @@ function MeView({ ctx, slug }: { ctx: SessionCtx; slug: string }) {
         {s.status === 'live' && <LiveBadge />}
       </div>
       {card}
+      {s.status !== 'closed' && <ClaimCard sessionId={ctx.sessionId} />}
       {s.status === 'live' && isHostRole(ctx.role) && ctx.sessionId && (
         <div className="card cohost-card">
           <p className="small">{t('cohost_note')}</p>

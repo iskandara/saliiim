@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useT } from '../i18n';
 import { backend, readHistory } from '../state';
+import { useAccount } from '../state/account';
+import type { MySession } from '../state/backend';
 import { useInstall } from '../state/install';
 import { Ball, Btn, Field, Icon, Page } from '../ui/kit';
 
@@ -21,15 +23,30 @@ export function Home() {
   const [link, setLink] = useState('');
   const [linkErr, setLinkErr] = useState<string | null>(null);
   const installer = useInstall();
+  const acct = useAccount();
+  const [mine, setMine] = useState<MySession[] | null>(null);
+  useEffect(() => {
+    if (acct.account) backend.mySessions().then(setMine, () => setMine(null));
+  }, [acct.account]);
+  // Signed in: sessions from the account, on any phone. Guests: this phone's own list.
+  const rows = mine
+    ? mine.map((m) => ({ id: m.id, slug: m.slug, name: m.name, at: m.createdAt, host: m.role === 'host' || m.role === 'co_host' }))
+    : history.map((h) => ({ id: h.id, slug: h.slug, name: h.name, at: h.at, host: h.role === 'host' }));
 
   return (
     <Page header="full">
       <section className="court-surface hero">
         <h1>{t('tagline')}</h1>
         <p>{t('home_sub')}</p>
-        <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>
-          {t('start_session')}
-        </Btn>
+        {acct.ready && !acct.account ? (
+          <Btn kind="primary" icon="user" onClick={() => acct.signIn({ reason: 'host', next: '/new' })}>
+            {t('host_gate_title')}
+          </Btn>
+        ) : (
+          <Btn kind="primary" icon="plus" onClick={() => nav('/new')}>
+            {t('start_session')}
+          </Btn>
+        )}
         <div className="ball-row" aria-hidden="true">
           {Array.from({ length: 7 }, (_, i) => (
             <Ball key={i} size={26} />
@@ -92,18 +109,18 @@ export function Home() {
       </form>
 
       <section>
-        <h3>{t('past_sessions')}</h3>
-        {history.length === 0 ? (
+        <h3>{t(mine ? 'your_sessions' : 'past_sessions')}</h3>
+        {rows.length === 0 ? (
           <p className="box muted">{t('no_sessions')}</p>
         ) : (
           <ul className="list">
-            {history.map((h) => (
+            {rows.map((h) => (
               <li key={h.id}>
-                <Link className="row link-row" to={h.role === 'host' ? `/s/${h.id}` : `/p/${h.slug}`}>
+                <Link className="row link-row" to={h.host ? `/s/${h.id}` : `/p/${h.slug}`}>
                   <span>
                     <b>{h.name}</b>
                     <span className="small muted">
-                      {new Date(h.at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · {t(h.role === 'host' ? 'role_host' : 'role_player')}
+                      {new Date(h.at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · {t(h.host ? 'role_host' : 'role_player')}
                     </span>
                   </span>
                   <Icon name="right" />
