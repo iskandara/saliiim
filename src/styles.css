@@ -2005,6 +2005,8 @@ section > h3 {
   .lang button[aria-pressed='false'] {
     display: none;
   }
+}
+
 /* Privacy policy and terms: plain reading pages. */
 .legal {
   display: grid;
