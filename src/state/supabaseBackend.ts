@@ -9,8 +9,10 @@ import type { Settings } from '../core/types';
 import { captchaToken as getCaptchaToken } from './turnstile';
 import {
   BackendError, type Account, type Backend, type Created, type FeedbackInput, type LockResult, type MetricName, type MySession,
-  type Profile, type ProfileInput, type SessionFeed,
+  type LevelChange, type Profile, type ProfileInput, type SessionFeed,
 } from './backend';
+import type { ProfileView } from '../core/profileView';
+import { summarizeChanges } from './levels';
 
 /** Full address to come back to after sign-in: a path in this app, or the current page. */
 const back = (path?: string) => (path?.startsWith('/') ? window.location.origin + path : window.location.href);
@@ -307,6 +309,42 @@ export class SupabaseBackend implements Backend {
     return (rows ?? []).map((r) => ({
       id: r.id!, slug: r.slug!, name: r.name ?? '', role: r.role as MySession['role'], status: r.status as MySession['status'], createdAt: r.created_at!,
     }));
+  }
+
+  private async authHeader(): Promise<Record<string, string>> {
+    const { data } = await this.client.auth.getSession();
+    return data.session ? { authorization: `Bearer ${data.session.access_token}` } : {};
+  }
+
+  async profileView(userId: string): Promise<ProfileView | null> {
+    const res = await fetch(`/api/profile/${encodeURIComponent(userId)}`, { headers: await this.authHeader() }).catch(() => null);
+    if (!res) throw new BackendError('offline');
+    if (res.status === 404) return null;
+    if (!res.ok) throw new BackendError(res.status === 503 ? 'not_configured' : 'server_error');
+    return (await res.json()) as ProfileView;
+  }
+
+  requestProcessing(sessionId: string) {
+    void fetch('/api/process', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId }) }).catch(() => undefined);
+  }
+
+  async levelChanges(sessionId: string): Promise<LevelChange[]> {
+    await this.deviceId();
+    const [changes, links] = await Promise.all([
+      this.client.from('rating_changes').select('user_id,before,after,ord').eq('session_id', sessionId).order('ord'),
+      this.client.from('player_links').select('player_id,user_id').eq('session_id', sessionId),
+    ]);
+    if (changes.error || links.error) return [];
+    return summarizeChanges(
+      (changes.data ?? []).map((c) => ({ user: c.user_id as string, before: Number(c.before), after: Number(c.after) })),
+      new Map((links.data ?? []).map((l) => [l.user_id as string, l.player_id as string])),
+    );
+  }
+
+  async deleteAccount() {
+    const res = await fetch('/api/delete-account', { method: 'POST', headers: await this.authHeader() }).catch(() => null);
+    if (!res?.ok) throw new BackendError(res ? 'server_error' : 'offline');
+    await this.signOut();
   }
 
   async sendFeedback(input: FeedbackInput) {

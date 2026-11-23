@@ -1,9 +1,22 @@
 {
-  // Cloudflare Workers static site: serve the Vite build, and send every route to the app.
+  // Cloudflare Worker: serves the Vite build, and answers /api/* for M2 results and profiles.
+  // SUPABASE_SECRET_KEY is a secret set in the Cloudflare dashboard, never in this file.
   "name": "saliiim",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "SUPABASE_URL": "https://veehvdktngixqwppvkyb.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_BRz53YtU21wEKEbs4cF_qQ_2zXCXEgh"
+  },
+  // Keep variables and secrets added in the dashboard when this file deploys.
+  "keep_vars": true,
+  // Rate any session that closed without being processed (for example, closed by the 3-hour auto-close).
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "observability": { "enabled": true }
 }

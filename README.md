@@ -118,6 +118,17 @@ accounts code goes live, or nobody can start a session.
    any verified sender address) or Resend (needs a domain you own).
 6. **Supabase SQL Editor:** run `supabase/migrations/0006_accounts.sql`.
 
+## M2 step 2: profiles, stats and levels
+
+The Worker (`worker/index.ts`) now also answers `/api/*`: it rates each session when it closes
+(and every 10 minutes for any it missed), serves profiles with each player's privacy settings
+applied, and deletes accounts. It needs the Supabase **secret** key, which never goes in the app:
+
+1. Supabase > Project Settings > API Keys > Secret keys: create one named `cloudflare-worker`, copy it.
+2. Cloudflare > Workers & Pages > saliiim > Settings > Variables and Secrets > Add:
+   type **Secret**, name `SUPABASE_SECRET_KEY`, value the key. Deploy.
+3. Supabase SQL Editor: run `supabase/migrations/0007_results.sql`.
+
 ## Project layout
 
 ```

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { myPlayer, standings, unitForPlayer, unitName, type SessionState } from '../core/session';
+import { nameOf, myPlayer, standings, unitForPlayer, unitName, type SessionState } from '../core/session';
 import { useT } from '../i18n';
 import { backend } from '../state';
 import { Ball, Btn } from '../ui/kit';
-import { ClaimCard } from '../ui/account';
+import { ClaimCard, LevelChanges } from '../ui/account';
 import { FeedbackForm } from '../ui/feedback';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
 import { downloadCanvas, drawSticker, loadLogo, needsDarkPreview, STICKER_FONT, STICKER_THEMES, themeSwatch, type StickerTheme } from '../ui/sticker';
@@ -90,6 +90,7 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
       </section>
 
       {me && <ClaimCard sessionId={sessionId} closedAt={s.lastAt ?? null} />}
+      <LevelChanges sessionId={sessionId} nameOf={(id) => (id ? nameOf(s, id) : '?')} />
 
       {mineIdx >= 0 && table[mineIdx]!.played > 0 && (
         <div className="stats">

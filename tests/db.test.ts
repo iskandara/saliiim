@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { processSession } from '../src/core/processSession';
 import { reduceSession, type SessionEvent } from '../src/core/session';
 import { DEFAULT_SETTINGS } from '../src/core/types';
 
@@ -39,6 +40,7 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(`
     create role authenticated;
+    create role anon;
     create schema auth;
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -52,6 +54,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/0004_open_host_postpone.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0005_feedback.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0006_accounts.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0007_results.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -220,6 +223,68 @@ describe('supabase migration', () => {
 
     const [mine] = await as<{ n: number }>(ACCOUNT, `select count(*)::int as n from public.my_sessions() where id = $1`, [sid]);
     expect(mine!.n).toBe(1);
+  });
+
+  it('results: a closed session is rated once, and a moved rating makes the store refuse', async () => {
+    const P1 = '00000000-0000-4000-8000-000000000021';
+    const P2 = '00000000-0000-4000-8000-000000000022';
+    ACCOUNTS.add(P1);
+    ACCOUNTS.add(P2);
+    for (const [dev, name, lvl] of [[HOST, 'Dimas', 'intermediate'], [P1, 'Rina', 'intermediate'], [P2, 'Budi', 'advanced']] as const) {
+      await as(dev, `select public.save_profile($1)`, [JSON.stringify({ name, startLevel: lvl })]);
+    }
+    const payload = { settings: { ...DEFAULT_SETTINGS, name: 'Rated', format: 'singles' }, hostPlayer: { id: 'dimas', name: 'Dimas' } };
+    const [row] = await as<{ r: { id: string; slug: string } }>(HOST, `select public.create_session($1) as r`, [JSON.stringify(payload)]);
+    const sid = row!.r.id;
+    for (const [dev, id, name] of [[P1, 'rina', 'Rina'], [P2, 'budi', 'Budi'], [STRANGER, 'tamu', 'Tamu']] as const) {
+      await as(dev, `select public.open_public($1)`, [row!.r.slug]);
+      await as(dev, `select public.join_session($1, $2, $3)`, [sid, id, name]);
+    }
+    await as(HOST, `select public.append_event($1, 'start', '{}')`, [sid]);
+    const events = async () => {
+      const rs = await as<{ id: number; type: string; payload: Record<string, unknown>; actor: string | null; created_at: Date }>(
+        HOST, `select id, type, payload, actor, created_at from public.session_events where session_id = $1 order by id`, [sid]);
+      return rs.map((r) => ({ seq: Number(r.id), type: r.type, payload: r.payload, actor: r.actor, at: r.created_at.toISOString() }) as SessionEvent);
+    };
+    // The host types in every result as it comes up, then closes.
+    for (let i = 0; i < 6; i++) {
+      const live = reduceSession(await events()).matches.find((m) => m.status === 'live');
+      if (!live) break;
+      await as(HOST, `select public.append_event($1, 'record_result', $2)`, [sid, JSON.stringify({ matchId: live.id, court: live.court, gamesA: 4, gamesB: 2 })]);
+    }
+    await as(HOST, `select public.append_event($1, 'close', '{}')`, [sid]);
+
+    const links = await as<{ player_id: string; user_id: string }>(HOST, `select player_id, user_id from public.player_links where session_id = $1`, [sid]);
+    const userOf = new Map(links.map((l) => [l.player_id, l.user_id]));
+    const read = async () => new Map((await as<{ id: string; rating: number; rated_matches: number }>(
+      HOST, `select id, rating, rated_matches from public.profiles where id = any($1)`, [[HOST, P1, P2]])).map((p) => [p.id, { rating: Number(p.rating), rated: p.rated_matches }]));
+    const out = processSession(await events(), (id) => userOf.get(id) ?? null, await read());
+    expect(out.rows.length).toBe(6);
+    expect(out.rows.some((r) => r.a_users.includes('') || r.b_users.includes(''))).toBe(true);
+    const apply = (o: typeof out) => as<{ r: string }>(HOST, `select public.apply_results($1, $2, $3, $4, $5) as r`,
+      [sid, JSON.stringify(o.rows), JSON.stringify(o.changes), JSON.stringify(o.expected), JSON.stringify(o.final)]);
+
+    // A rating that moved since it was read: nothing is written.
+    await db.query(`update public.profiles set rating = rating + 1 where id = $1`, [P2]);
+    await expect(apply(out)).rejects.toThrow('stale');
+    await db.query(`update public.profiles set rating = rating - 1 where id = $1`, [P2]);
+
+    expect((await apply(out))[0]!.r).toBe('done');
+    expect((await apply(out))[0]!.r).toBe('already');
+    const after = await read();
+    for (const f of out.final) expect(after.get(f.user)).toEqual({ rating: f.rating, rated: f.rated });
+    const [n] = await as<{ n: number }>(HOST, `select count(*)::int as n from public.match_results where session_id = $1`, [sid]);
+    expect(n!.n).toBe(6);
+    // Members see the session's level changes; the results table itself is closed to the app.
+    await as(P1, `set role authenticated`);
+    const seen = await as<{ n: number }>(P1, `select count(*)::int as n from public.rating_changes where session_id = $1`, [sid]);
+    expect(seen[0]!.n).toBeGreaterThan(0);
+    await expect(as(P1, `select public.apply_results($1, '[]', '[]', '[]', '[]')`, [sid])).rejects.toThrow();
+    await db.exec(`reset role`);
+
+    await as(HOST, `select public.delete_account_data($1)`, [P1]);
+    const [left] = await as<{ n: number }>(HOST, `select count(*)::int as n from public.match_results where a_users @> array[$1::uuid] or b_users @> array[$1::uuid]`, [P1]);
+    expect(left!.n).toBe(0);
   });
 
   it('auto-close ends idle sessions and locks them', async () => {

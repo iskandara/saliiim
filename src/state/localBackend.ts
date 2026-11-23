@@ -6,8 +6,13 @@
  */
 import { canAppend, reduceSession, roleOf, type CourtLock, type EventBody, type SessionEvent } from '../core/session';
 import type { Settings } from '../core/types';
+import { buildProfileView, type PersonRef } from '../core/profileView';
+import { processSession, type StoredChange, type StoredRow } from '../core/processSession';
+import { START_RATING, type Rated } from '../core/rating';
+import type { ResultRow } from '../core/stats';
+import { summarizeChanges } from './levels';
 import {
-  BackendError, newId, type Account, type Backend, type Created, type FeedbackInput, type LockResult, type MySession, type Profile,
+  BackendError, newId, type Account, type LevelChange, type Backend, type Created, type FeedbackInput, type LockResult, type MySession, type Profile,
   type ProfileInput, type SessionFeed, type StartLevel,
 } from './backend';
 
@@ -16,7 +21,14 @@ const ACCOUNTS = 'saliiim:local:accounts';
 const PROFILES = 'saliiim:local:profiles';
 /** The code every demo email "receives". */
 export const DEMO_CODE = '123456';
-const START: Record<StartLevel, number> = { beginner: 800, intermediate: 1200, advanced: 1600, competitive: 2000 };
+const START: Record<StartLevel, number> = START_RATING;
+// Demo results: what the Worker would store, kept in this browser.
+const RESULTS = 'saliiim:local:results';
+interface LocalResults {
+  closedAt: string;
+  rows: StoredRow[];
+  changes: StoredChange[];
+}
 
 function readMap<T>(key: string): Record<string, T> {
   try {
@@ -145,6 +157,28 @@ export class LocalBackend implements Backend {
     }
     if (body.type === 'close') s.locks = [];
     save(all);
+    if (body.type === 'close') this.rateLocally(s);
+  }
+
+  /** Demo stand-in for the results Worker: rate the closed session and update demo profiles. */
+  private rateLocally(s: Stored) {
+    const accounts = readMap<Account>(ACCOUNTS);
+    const profiles = readMap<Profile>(PROFILES);
+    const state = reduceSession(s.events);
+    const userOf = (playerId: string) => {
+      const dev = state.players.find((p) => p.id === playerId)?.deviceId;
+      return dev && accounts[dev] ? dev : null;
+    };
+    const ratings = new Map<string, Rated>(Object.values(profiles).map((p) => [p.id, { rating: p.rating, rated: p.ratedMatches }]));
+    const out = processSession(s.events, userOf, ratings);
+    for (const f of out.final) {
+      const p = profiles[f.user];
+      if (p) profiles[f.user] = { ...p, rating: f.rating, ratedMatches: f.rated };
+    }
+    writeMap(PROFILES, profiles);
+    const results = readMap<LocalResults>(RESULTS);
+    results[s.id] = { closedAt: new Date().toISOString(), rows: out.rows, changes: out.changes };
+    writeMap(RESULTS, results);
   }
 
   async acquireLock(sessionId: string, court: number, matchId: string, force: boolean): Promise<LockResult> {
@@ -245,6 +279,47 @@ export class LocalBackend implements Backend {
     all[device()] = next;
     writeMap(PROFILES, all);
     return next;
+  }
+
+  async profileView(userId: string) {
+    const profiles = readMap<Profile>(PROFILES);
+    const p = profiles[userId];
+    if (!p) return null;
+    const rows: ResultRow[] = [];
+    for (const [sessionId, r] of Object.entries(readMap<LocalResults>(RESULTS))) {
+      for (const row of r.rows) {
+        if (![...row.a_users, ...row.b_users].includes(userId)) continue;
+        rows.push({
+          sessionId, sessionName: row.session_name, playedAt: r.closedAt, matchId: row.match_id, ord: row.ord, format: row.format,
+          aUsers: row.a_users.map((u) => u || null), bUsers: row.b_users.map((u) => u || null), aNames: row.a_names, bNames: row.b_names,
+          gamesA: row.games_a, gamesB: row.games_b, winner: row.winner,
+          delta: r.changes.find((c) => c.match_id === row.match_id && c.user === userId)?.delta ?? null,
+        });
+      }
+    }
+    const people: Record<string, PersonRef> = {};
+    for (const o of Object.values(profiles)) if (o.id !== userId) people[o.id] = { name: o.name, photoUrl: o.isPublic ? o.photoUrl : null, open: o.isPublic };
+    return buildProfileView(p, rows, device(), people);
+  }
+
+  requestProcessing() {
+    // Demo sessions are rated the moment they close.
+  }
+
+  async levelChanges(sessionId: string): Promise<LevelChange[]> {
+    const r = readMap<LocalResults>(RESULTS)[sessionId];
+    if (!r) return [];
+    const s = load()[sessionId];
+    const state = s ? reduceSession(s.events) : null;
+    const playerOf = new Map((state?.players ?? []).filter((p) => p.deviceId).map((p) => [p.deviceId!, p.id]));
+    return summarizeChanges([...r.changes].sort((a, b) => a.ord - b.ord), playerOf);
+  }
+
+  async deleteAccount() {
+    const profiles = readMap<Profile>(PROFILES);
+    delete profiles[device()];
+    writeMap(PROFILES, profiles);
+    await this.signOut();
   }
 
   async mySessions(): Promise<MySession[]> {

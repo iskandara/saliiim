@@ -321,6 +321,7 @@ function BoardBody({ ctx }: { ctx: SessionCtx }) {
               run(async () => {
                 setClosing(false);
                 await append({ type: 'close', payload: { by: 'host' } });
+                backend.requestProcessing(id);
                 nav(`/s/${id}/summary`);
               })
             }

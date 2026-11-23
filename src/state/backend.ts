@@ -1,4 +1,5 @@
 import type { CourtLock, EventBody, SessionEvent } from '../core/session';
+import type { ProfileView } from '../core/profileView';
 import type { Settings } from '../core/types';
 
 export interface Created {
@@ -60,8 +61,15 @@ export interface MySession {
   createdAt: string;
 }
 
-/** Level shown to players: the rating divided by 400, kept between 1.0 and 7.0. */
-export const levelOf = (rating: number) => Math.min(7, Math.max(1, rating / 400));
+export { levelOf } from '../core/rating';
+
+/** A signed-in player's level change over one session, for the summary. */
+export interface LevelChange {
+  playerId: string;
+  userId: string;
+  before: number;
+  after: number;
+}
 
 /** What the feedback form sends. A rating or a message is required. */
 export interface FeedbackInput {
@@ -116,6 +124,15 @@ export interface Backend {
   myProfile(): Promise<Profile | null>;
   saveProfile(input: ProfileInput): Promise<Profile>;
   mySessions(): Promise<MySession[]>;
+
+  // Profiles and levels (M2 step 2)
+  /** A profile as this viewer may see it; null if there is no such profile. */
+  profileView(userId: string): Promise<ProfileView | null>;
+  /** Asks the server to rate a session that just closed. Fire and forget. */
+  requestProcessing(sessionId: string): void;
+  /** Empty until the session has been rated. */
+  levelChanges(sessionId: string): Promise<LevelChange[]>;
+  deleteAccount(): Promise<void>;
 }
 
 export class BackendError extends Error {

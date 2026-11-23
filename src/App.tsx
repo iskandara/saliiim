@@ -4,6 +4,8 @@ import { PrefsProvider, useT } from './i18n';
 import { Board } from './screens/Board';
 import { FeedbackPage } from './screens/Feedback';
 import { Welcome } from './screens/Welcome';
+import { ProfilePage } from './screens/Profile';
+import { SettingsPage } from './screens/Settings';
 import { AccountProvider, useAccount } from './state/account';
 import { SignInSheet } from './ui/account';
 import { Home } from './screens/Home';
@@ -77,6 +79,8 @@ const router = createBrowserRouter([
       { path: '/new', element: <Setup /> },
       { path: '/feedback', element: <FeedbackPage /> },
       { path: '/welcome', element: <Welcome /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '/u/:id', element: <ProfilePage /> },
       { path: '/privacy', element: <PrivacyPage /> },
       { path: '/terms', element: <TermsPage /> },
       { path: '/s/:id', element: <Board /> },

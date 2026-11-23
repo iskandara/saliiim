@@ -98,6 +98,8 @@ export interface MatchState {
   result: MatchResult | null;
   /** Final score typed in after the match instead of scoring live; waits for the other team's confirm. */
   entered: { gamesA: number; gamesB: number } | null;
+  /** Event number that finished the match, so results are rated in the order they were confirmed. */
+  doneSeq?: number;
 }
 
 export interface Notice {
@@ -484,6 +486,7 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       const r = pendingResult(m);
       if (m.status !== 'pending' || !r) fail('not_pending');
       m.status = 'done';
+      m.doneSeq = ev.seq;
       m.result = { ...r!, reason: m.entered ? 'entered' : 'played' };
       break;
     }
@@ -495,6 +498,7 @@ export function applyEvent(s: SessionState, ev: SessionEvent): void {
       if (isHostRole(roleOf(s, ev.actor))) {
         // Hosts are trusted: the result counts straight away.
         m.status = 'done';
+        m.doneSeq = ev.seq;
         m.entered = null;
         m.result = { gamesA, gamesB, winner: gamesA > gamesB ? 0 : 1, reason: 'entered' };
       } else {

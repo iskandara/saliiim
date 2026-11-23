@@ -107,7 +107,8 @@ export function Welcome() {
             <Icon name="info" size={14} /> {problem}
           </p>
         )}
-        <div className="cta-bar">
+        {/* Not sticky: a bar that moves when the keyboard closes would catch the tap meant for the form. */}
+        <div className="form-end">
           <Btn kind="primary" icon="check" type="submit" disabled={busy}>
             {editing && profile ? t('save') : t('welcome_save')}
           </Btn>

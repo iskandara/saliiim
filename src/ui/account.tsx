@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n';
 import { backend } from '../state';
 import { useAccount, type SignInReason } from '../state/account';
-import { levelOf } from '../state/backend';
+import { levelOf, type LevelChange } from '../state/backend';
 import { DEMO_CODE } from '../state/localBackend';
 import { errorCode } from '../state/useSession';
 import { Btn, Field, Icon, Sheet, useToast } from './kit';
@@ -233,9 +233,13 @@ export function AccountButton() {
           </div>
         </div>
         <div className="actions column">
-          <Link className="btn ghost" to="/welcome?edit=1" onClick={() => setOpen(false)}>
-            <Icon name="edit" />
-            <span>{t('edit_profile')}</span>
+          <Link className="btn primary" to={`/u/${account.id}`} onClick={() => setOpen(false)}>
+            <Icon name="user" />
+            <span>{t('pf_mine')}</span>
+          </Link>
+          <Link className="btn ghost" to="/settings" onClick={() => setOpen(false)}>
+            <Icon name="gear" />
+            <span>{t('st_title')}</span>
           </Link>
           <Btn icon="left" onClick={() => void signOut()}>
             {t('sign_out')}
@@ -273,5 +277,54 @@ export function ClaimCard({ sessionId, closedAt }: { sessionId: string | null; c
         {t('save_stats_btn')}
       </Btn>
     </div>
+  );
+}
+
+/**
+ * Summary card: each signed-in player's level before and after the session. Rating happens on the
+ * server right after the close, so this asks for it and checks back a few times.
+ */
+export function LevelChanges({ sessionId, nameOf }: { sessionId: string | null; nameOf: (playerId: string) => string }) {
+  const t = useT();
+  const [rows, setRows] = useState<LevelChange[] | null>(null);
+  useEffect(() => {
+    if (!sessionId) return;
+    let alive = true;
+    let tries = 0;
+    const look = async () => {
+      const r = await backend.levelChanges(sessionId).catch(() => []);
+      if (!alive) return;
+      if (r.length || tries >= 5) return setRows(r);
+      if (tries === 0) backend.requestProcessing(sessionId);
+      tries++;
+      setTimeout(() => void look(), 2500);
+    };
+    void look();
+    return () => {
+      alive = false;
+    };
+  }, [sessionId]);
+  if (!rows?.length) return null;
+  return (
+    <section>
+      <h3>{t('lc_title')}</h3>
+      <ul className="list">
+        {rows.map((r) => {
+          const before = levelOf(r.before);
+          const after = levelOf(r.after);
+          const up = after >= before;
+          return (
+            <li key={r.userId} className="row">
+              <span className="grow">
+                <Link to={`/u/${r.userId}`}>{nameOf(r.playerId)}</Link>
+              </span>
+              <span className="small muted">{before.toFixed(2)} →</span>
+              <b>{after.toFixed(2)}</b>
+              <span className={`delta ${up ? 'up' : 'down'}`}>{(up ? '+' : '') + (after - before).toFixed(2)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
