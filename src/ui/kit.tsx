@@ -105,6 +105,15 @@ export function Ball({ size = 28, tone = 'lime' }: { size?: number; tone?: 'lime
   );
 }
 
+/** Marketing captures (scripts/capture) hide the demo banner so screens look like the real app. */
+const captureMode = (() => {
+  try {
+    return localStorage.getItem('saliiim:capture') === '1';
+  } catch {
+    return false;
+  }
+})();
+
 const narrow = () => window.matchMedia?.('(max-width: 360px)').matches ?? false;
 
 /** Green header bar: wordmark and the theme/language pill. One size for every screen. */
@@ -154,7 +163,7 @@ export function Page({ children, tabs, wide, header = 'compact' }: { children: R
           {t('skip_to_content')}
         </a>
         {header !== 'none' && <AppHeader />}
-        {backend.mode === 'local' && header !== 'none' && <p className="demo">{t('demo_banner')}</p>}
+        {backend.mode === 'local' && header !== 'none' && !captureMode && <p className="demo">{t('demo_banner')}</p>}
         <main className="content" id="main" tabIndex={-1}>
           {children}
         </main>

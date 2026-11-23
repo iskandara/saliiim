@@ -5,3 +5,6 @@ dist
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Marketing captures (npm run capture)
+captures/
