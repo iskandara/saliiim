@@ -2192,3 +2192,15 @@ section > h3 {
   display: grid;
   margin-top: 4px;
 }
+
+/* Sticker: whose sticker to make. */
+.sticker-for select {
+  font: inherit;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--card);
+  color: var(--ink);
+  width: 100%;
+}

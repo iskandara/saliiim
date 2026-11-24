@@ -212,13 +212,38 @@ function wrap(g: CanvasRenderingContext2D, text: string, max: number): string[] 
   return lines;
 }
 
-export function downloadCanvas(c: HTMLCanvasElement, filename: string) {
-  c.toBlob((blob) => {
-    if (!blob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  }, 'image/png');
+
+/**
+ * On phones, the share sheet is the only way a web page can put an image in the photo gallery
+ * ("Save Image" on iPhone, "Save" or a chat app on Android). Desktops get a normal download.
+ */
+export function canShareImage(): boolean {
+  try {
+    if (!window.matchMedia?.('(pointer: coarse)').matches) return false;
+    const probe = new File([new Blob(['x'], { type: 'image/png' })], 'probe.png', { type: 'image/png' });
+    return !!navigator.canShare?.({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
+/** Must run straight from the tap (no await before it), or Safari refuses to open the share sheet. */
+export function shareOrDownload(blob: Blob, filename: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (canShareImage()) {
+    return navigator
+      .share({ files: [file] })
+      .then(() => 'shared' as const)
+      .catch((e: Error) => (e?.name === 'AbortError' ? 'cancelled' : (download(blob, filename), 'downloaded')));
+  }
+  download(blob, filename);
+  return Promise.resolve('downloaded');
+}
+
+function download(blob: Blob, filename: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }

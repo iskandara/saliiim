@@ -12,7 +12,7 @@ account; signing in adds a profile, stats and a playing level. Built for casual 
 and "Coming next" in the same commit. Other people's Claude sessions read this file to understand
 the product (including for marketing), so a stale line here becomes a wrong claim in a post.
 
-## What's live (as of 23 Nov 2026)
+## What's live (as of 24 Nov 2026)
 
 **Running a session (M1)**
 - Setup: singles or doubles; rotating partners or fixed pairs; 1 to 4 courts, up to 16 players;
@@ -25,8 +25,9 @@ the product (including for marketing), so a stale line here becomes a wrong clai
   add late arrivals. If the host steps off, every player becomes a co-host.
 - Standings by win rate then game difference. Live view for spectators, and TV mode.
 - Works offline: points queue on the phone and sync when the signal returns.
-- End of session: summary, a shareable sticker (wide, six colours, two of them see-through),
-  feedback form. Sessions close on their own after 3 idle hours.
+- End of session: summary, a shareable sticker (wide, six colours, two of them see-through) that
+  anyone who played can make in their own name from the link, saved to the phone's photos through
+  the share sheet; feedback form. Sessions close on their own after 3 idle hours.
 
 **Accounts and profiles (M2, steps 1 and 2)**
 - Sign in with Google or an email code. Hosts must sign in; players and spectators never have to.

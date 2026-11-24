@@ -32,7 +32,8 @@ function usePublic(slug: string) {
 }
 
 function PublicGate({ children, wide, header }: { children: (ctx: SessionCtx, slug: string) => ReactNode; wide?: boolean; header?: (ctx: SessionCtx) => HeaderSize }) {
-  const { slug = '' } = useParams();
+  // Chat apps sometimes carry punctuation from the message into the link ("…/p/AbC123." or "…)").
+  const slug = (useParams().slug ?? '').replace(/[^A-Za-z0-9_-]+$/, '');
   const { ctx, err } = usePublic(slug);
   const t = useT();
   if (err === 'anonymous_auth_disabled') return <Page><p className="box warn">{t(err)}</p></Page>;

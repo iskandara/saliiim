@@ -55,6 +55,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/0005_feedback.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0006_accounts.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/0007_results.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/0008_link_fix.sql', 'utf8'));
   await db.exec(`grant usage on schema public to authenticated; grant select on all tables in schema public to authenticated;`);
 });
 
@@ -285,6 +286,18 @@ describe('supabase migration', () => {
     await as(HOST, `select public.delete_account_data($1)`, [P1]);
     const [left] = await as<{ n: number }>(HOST, `select count(*)::int as n from public.match_results where a_users @> array[$1::uuid] or b_users @> array[$1::uuid]`, [P1]);
     expect(left!.n).toBe(0);
+  });
+
+  it('links: new codes are letters and digits; a code missing its trailing - or _ still opens', async () => {
+    const [{ s }] = await as<{ s: string }>(HOST, `select public._slug() as s`);
+    expect(s).toMatch(/^[A-Za-z0-9]{12}$/);
+    await db.query(`update public.sessions set slug = 'Kq3xZ9pLm2_-' where id = $1`, [sessionId]);
+    for (const tried of ['Kq3xZ9pLm2_-', 'Kq3xZ9pLm2_', 'Kq3xZ9pLm2']) {
+      const [r] = await as<{ id: string }>(STRANGER, `select public.open_public($1) as id`, [tried]);
+      expect(r!.id).toBe(sessionId);
+    }
+    await fails(STRANGER, `select public.open_public($1)`, ['Kq3xZ9pL'], 'not_found');
+    await fails(STRANGER, `select public.open_public($1)`, ['Kq3xZ9pLm2_%'], 'not_found');
   });
 
   it('auto-close ends idle sessions and locks them', async () => {

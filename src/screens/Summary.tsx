@@ -6,7 +6,7 @@ import { Ball, Btn } from '../ui/kit';
 import { ClaimCard, LevelChanges } from '../ui/account';
 import { FeedbackForm } from '../ui/feedback';
 import { ResultsList, StandingsTable } from '../ui/session-ui';
-import { downloadCanvas, drawSticker, loadLogo, needsDarkPreview, STICKER_FONT, STICKER_THEMES, themeSwatch, type StickerTheme } from '../ui/sticker';
+import { canShareImage, drawSticker, loadLogo, needsDarkPreview, shareOrDownload, STICKER_FONT, STICKER_THEMES, themeSwatch, type StickerTheme } from '../ui/sticker';
 
 const THEME_KEY = 'saliiim:sticker-theme';
 
@@ -26,12 +26,25 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
   const me = myPlayer(s, device);
   const myUnit = me ? unitForPlayer(s, me.id) : null;
   const mineIdx = myUnit ? table.findIndex((r) => r.unit === myUnit) : -1;
-  const row = mineIdx >= 0 && table[mineIdx]!.played > 0 ? table[mineIdx]! : table[0];
-  const rank = mineIdx >= 0 && table[mineIdx]!.played > 0 ? mineIdx + 1 : 1;
+  const played = table.filter((r) => r.played > 0);
+  // Whose sticker: yours if you played; otherwise anyone can pick their own name (no claim needed,
+  // so players who never tapped "That's me" still get theirs after the session closes).
+  const [pick, setPick] = useState<string | null>(null);
+  const chosen = pick ?? (mineIdx >= 0 && table[mineIdx]!.played > 0 ? table[mineIdx]!.unit : table[0]?.unit);
+  const pickIdx = Math.max(0, table.findIndex((r) => r.unit === chosen));
+  const row = table[pickIdx];
+  const rank = pickIdx + 1;
   const date = new Date(s.createdAt ?? Date.now()).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const gd = (n: number) => (n > 0 ? `+${n}` : String(n));
 
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  // Ready before the tap: the share sheet only opens straight from a tap, with no waiting in between.
+  const [blob, setBlob] = useState<Blob | null>(null);
+  useEffect(() => {
+    setBlob(null);
+    canvas?.toBlob((b) => setBlob(b), 'image/png');
+  }, [canvas]);
+  const share = canShareImage();
   const [theme, setTheme] = useState<StickerTheme>(savedTheme);
   const pickTheme = (v: StickerTheme) => {
     setTheme(v);
@@ -92,7 +105,7 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
       {me && <ClaimCard sessionId={sessionId} closedAt={s.lastAt ?? null} />}
       <LevelChanges sessionId={sessionId} nameOf={(id) => (id ? nameOf(s, id) : '?')} />
 
-      {mineIdx >= 0 && table[mineIdx]!.played > 0 && (
+      {mineIdx >= 0 && table[mineIdx]!.played > 0 && (pick === null || pick === myUnit) && (
         <div className="stats">
           <div>
             <b>#{rank}</b>
@@ -117,6 +130,21 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
 
       {canvas && (
         <section>
+          {played.length > 1 && (
+            <div className="field sticker-for">
+              <label className="field-label" htmlFor="sticker-for">
+                {t('sticker_for')}
+              </label>
+              <select id="sticker-for" value={chosen} onChange={(e) => setPick(e.target.value)}>
+                {played.map((r) => (
+                  <option key={r.unit} value={r.unit}>
+                    {unitName(s, r.unit)}
+                  </option>
+                ))}
+              </select>
+              {mineIdx < 0 && <span className="small muted">{t('sticker_for_help')}</span>}
+            </div>
+          )}
           <h3>{t('sticker_style')}</h3>
           <div className="swatches" role="radiogroup" aria-label={t('sticker_style')}>
             {STICKER_THEMES.map((v) => (
@@ -137,12 +165,19 @@ export function SummaryView({ s, device, sessionId }: { s: SessionState; device:
             <img src={canvas.toDataURL('image/png')} alt={`${unitName(s, row!.unit)} sticker`} />
           </div>
           <p className="small">{t('sticker_caption')}</p>
-          <Btn kind="primary" icon="download" onClick={() => {
-              downloadCanvas(canvas, `saliiim-${s.slug || 'session'}.png`);
-              backend.track('sticker_downloaded', sessionId);
-            }}>
-            {t('download')}
+          <Btn
+            kind="primary"
+            icon="download"
+            disabled={!blob}
+            onClick={() => {
+              if (!blob) return;
+              const name = `saliiim-${(unitName(s, row!.unit) || 'sticker').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`;
+              void shareOrDownload(blob, name).then((r) => r !== 'cancelled' && backend.track('sticker_downloaded', sessionId));
+            }}
+          >
+            {t(share ? 'sticker_save' : 'download')}
           </Btn>
+          {share && <p className="small muted">{t('sticker_save_help')}</p>}
         </section>
       )}
 

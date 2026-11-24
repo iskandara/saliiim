@@ -489,6 +489,10 @@ export const en = {
   hand_right: 'Right',
   hand_left: 'Left',
   pf_level: 'Level',
+  sticker_for: 'Sticker for',
+  sticker_for_help: 'Pick your name to make your own sticker.',
+  sticker_save: 'Save or share sticker',
+  sticker_save_help: 'Choose "Save Image" to put it in your photos, or send it straight to a chat.',
 };
 
 export type Key = keyof typeof en;
@@ -983,4 +987,8 @@ export const jksl: Record<Key, string> = {
   hand_right: 'Kanan',
   hand_left: 'Kiri',
   pf_level: 'Level',
+  sticker_for: 'Stiker buat',
+  sticker_for_help: 'Pilih nama lo buat bikin stiker sendiri.',
+  sticker_save: 'Simpan atau share stiker',
+  sticker_save_help: 'Pilih "Simpan Gambar" biar masuk galeri, atau langsung kirim ke chat.',
 };
